@@ -1,0 +1,47 @@
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Główny wynik -->
+    <div class="bg-indigo-600 p-8 rounded-[2rem] text-white shadow-xl shadow-indigo-100 relative overflow-hidden group">
+        <div class="absolute -right-4 -top-4 bg-white/10 w-32 h-32 rounded-full blur-2xl group-hover:bg-white/20 transition-all duration-700"></div>
+        <div class="flex justify-between items-start mb-4">
+            <div class="p-3 bg-white/20 rounded-2xl">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
+            </div>
+            <span class="text-white/80 text-sm font-medium flex items-center gap-1">
+            Zysk na czysto
+          </span>
+        </div>
+        <div class="space-y-1">
+            <h3 class="text-4xl font-black">
+                {{ service.results().netTakeHome | number:'1.2-2' }} zł
+            </h3>
+            <p class="text-indigo-100 font-medium opacity-80">Kwota "na rękę" po odliczeniach</p>
+        </div>
+    </div>
+
+    <!-- Wykres/Paski -->
+    <div class="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col justify-between">
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-slate-500 font-semibold uppercase tracking-wider text-xs">Struktura Kosztów</h3>
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10Z"/></svg>
+        </div>
+        <div class="space-y-4">
+            <div class="flex justify-between items-center">
+            <span class="text-slate-600 text-sm flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-red-400"></span> Podatki (PIT)
+            </span>
+                <span class="font-bold text-slate-800">{{ service.results().incomeTax | number:'1.2-2' }} zł</span>
+            </div>
+            <div class="flex justify-between items-center">
+            <span class="text-slate-600 text-sm flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-blue-400"></span> ZUS i Składki
+            </span>
+                <span class="font-bold text-slate-800">{{ service.results().totalZus | number:'1.2-2' }} zł</span>
+            </div>
+            <div class="w-full bg-slate-100 h-2 rounded-full mt-4 overflow-hidden flex">
+                <div class="h-full bg-red-400" [style.width.%]="(service.results().incomeTax / service.results().grossTotal) * 100"></div>
+                <div class="h-full bg-blue-400" [style.width.%]="(service.results().totalZus / service.results().grossTotal) * 100"></div>
+                <div class="h-full bg-indigo-600" [style.width.%]="(service.results().netTakeHome / service.results().grossTotal) * 100"></div>
+            </div>
+        </div>
+    </div>
+</div>

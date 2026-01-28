@@ -1,0 +1,30 @@
+<div class="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-indigo-100">
+    <app-navbar />
+
+    <main class="max-w-7xl mx-auto px-4 py-8 md:py-12">
+        <header class="mb-10 text-center md:text-left">
+            <h1 class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-2">
+                Kalkulator B2B 2025
+            </h1>
+            <p class="text-slate-500 text-lg">
+                Profesjonalna optymalizacja podatkowa w architekturze komponentowej.
+            </p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Lewa kolumna: Formularze -->
+            <div class="lg:col-span-4">
+                <app-parameters-form />
+            </div>
+
+            <!-- Prawa kolumna: Dashboard -->
+            <div class="lg:col-span-8 space-y-6">
+                <app-results-summary />
+                <app-detailed-breakdown />
+                <app-expenses-manager />
+            </div>
+        </div>
+    </main>
+
+    <app-footer />
+</div>

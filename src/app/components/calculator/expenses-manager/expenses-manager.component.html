@@ -1,0 +1,85 @@
+<div class="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6">
+    <div class="flex justify-between items-center mb-6">
+        <div class="flex items-center gap-2">
+            <div class="bg-orange-50 p-2 rounded-lg text-orange-600">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+                    <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+                </svg>
+            </div>
+            <h2 class="font-bold text-slate-800">Wydatki firmowe (Koszty)</h2>
+        </div>
+        <button
+                (click)="service.addExpense()"
+                class="flex items-center gap-1.5 px-4 py-2 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14"/>
+                <path d="M12 5v14"/>
+            </svg>
+            Dodaj koszt
+        </button>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead>
+            <tr class="text-slate-400 text-xs uppercase tracking-widest font-bold">
+                <th class="pb-4 px-2">Opis</th>
+                <th class="pb-4 px-2">Netto</th>
+                <th class="pb-4 px-2">VAT</th>
+                <th class="pb-4 px-2 text-right">Usuń</th>
+            </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+                @for (expense of service.expenses(); track expense.id) {
+                    <tr class="group hover:bg-slate-50/50 transition-colors">
+                        <td class="py-4 px-2">
+                            <input
+                                    type="text"
+                                    [value]="expense.name"
+                                    (input)="service.updateExpense(expense.id, 'name', getVal($event))"
+                                    class="bg-transparent border-none focus:ring-0 font-medium text-slate-700 p-0 w-full"
+                            />
+                        </td>
+                        <td class="py-4 px-2">
+                            <input
+                                    type="number"
+                                    [value]="expense.net"
+                                    (input)="service.updateExpense(expense.id, 'net', getNum($event))"
+                                    class="bg-transparent border-none focus:ring-0 font-bold text-slate-800 p-0 w-24"
+                            />
+                            <span class="text-slate-400 text-sm ml-1">zł</span>
+                        </td>
+                        <td class="py-4 px-2">
+                            <select
+                                    [value]="expense.vat"
+                                    (change)="service.updateExpense(expense.id, 'vat', getNum($event))"
+                                    class="bg-transparent border-none focus:ring-0 text-slate-500 text-sm p-0"
+                            >
+                                <option [value]="23">23%</option>
+                                <option [value]="8">8%</option>
+                                <option [value]="0">0%</option>
+                            </select>
+                        </td>
+                        <td class="py-4 px-2 text-right">
+                            <button
+                                    (click)="service.removeExpense(expense.id)"
+                                    class="p-2 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                     stroke-linejoin="round">
+                                    <path d="M3 6h18"/>
+                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,62 @@
+<div class="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+    <div class="p-6 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+        <h2 class="font-bold text-slate-800 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6"/><path d="M16 12H8"/><path d="M13 16H8"/></svg>
+            Rozliczenie miesięczne
+        </h2>
+        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">PLN</span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3">
+        <!-- Kolumna Faktura -->
+        <div class="p-6 border-b md:border-b-0 md:border-r border-slate-100 space-y-4">
+            <h4 class="text-xs font-bold text-indigo-600 uppercase">Twoja Faktura</h4>
+            <div class="flex justify-between items-center text-sm">
+                <span class="text-slate-500">Netto</span>
+                <span class="font-semibold">{{ service.income() | number }} zł</span>
+            </div>
+            <div class="flex justify-between items-center text-sm text-emerald-600">
+                <span>VAT ({{ service.vatRate() }}%)</span>
+                <span class="font-semibold">+{{ service.results().vatAmount | number:'1.2-2' }} zł</span>
+            </div>
+            <div class="pt-2 border-t border-slate-50 flex justify-between items-center text-indigo-600 font-bold">
+                <span>Brutto</span>
+                <span>{{ service.results().grossTotal | number:'1.2-2' }} zł</span>
+            </div>
+        </div>
+
+        <!-- Kolumna ZUS -->
+        <div class="p-6 border-b md:border-b-0 md:border-r border-slate-100 space-y-4">
+            <h4 class="text-xs font-bold text-rose-500 uppercase">Obciążenia ZUS</h4>
+            <div class="flex justify-between items-center text-sm">
+                <span class="text-slate-500">Zdrowotna</span>
+                <span class="font-semibold text-slate-700">{{ service.results().healthZus | number:'1.2-2' }} zł</span>
+            </div>
+            <div class="flex justify-between items-center text-sm">
+                <span class="text-slate-500">Społeczne</span>
+                <span class="font-semibold text-slate-700">{{ service.results().socialZus | number:'1.2-2' }} zł</span>
+            </div>
+            <div class="pt-2 border-t border-slate-50 flex justify-between items-center text-rose-500 font-bold">
+                <span>Razem ZUS</span>
+                <span>{{ service.results().totalZus | number:'1.2-2' }} zł</span>
+            </div>
+        </div>
+
+        <!-- Kolumna Podatki -->
+        <div class="p-6 space-y-4">
+            <h4 class="text-xs font-bold text-amber-500 uppercase">Inne obciążenia</h4>
+            <div class="flex justify-between items-center text-sm">
+                <span class="text-slate-500">Podatek PIT</span>
+                <span class="font-semibold text-slate-700">{{ service.results().incomeTax | number:'1.2-2' }} zł</span>
+            </div>
+            <div class="flex justify-between items-center text-sm">
+                <span class="text-slate-500">Koszty netto</span>
+                <span class="font-semibold text-slate-700">{{ service.results().totalExpensesNet | number }} zł</span>
+            </div>
+            <div class="pt-2 border-t border-slate-50 flex justify-between items-center text-amber-500 font-bold">
+                <span>Suma strat</span>
+                <span>{{ (service.results().incomeTax + service.results().totalZus + service.results().totalExpensesNet) | number:'1.2-2' }} zł</span>
+            </div>
+        </div>
+    </div>
+</div>

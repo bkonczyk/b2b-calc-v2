@@ -1,79 +1,69 @@
-<div class="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6">
+<div class="bg-slate-800 rounded-lg border border-slate-700 p-6">
     <div class="flex justify-between items-center mb-6">
-        <div class="flex items-center gap-2">
-            <div class="bg-orange-50 p-2 rounded-lg text-orange-600">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
-                    <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
-                </svg>
-            </div>
-            <h2 class="font-bold text-slate-800">Wydatki firmowe (Koszty)</h2>
-        </div>
+        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+            <span class="w-1.5 h-1.5 bg-orange-500 rounded-full"></span>
+            Rejestr Kosztów
+        </h3>
         <button
                 (click)="service.addExpense()"
-                class="flex items-center gap-1.5 px-4 py-2 bg-slate-900 text-white rounded-xl text-sm font-semibold hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-200"
+                class="bg-slate-700 hover:bg-emerald-600 text-white text-xs font-bold uppercase tracking-wider py-2 px-4 rounded transition-all flex items-center gap-2"
         >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M5 12h14"/>
-                <path d="M12 5v14"/>
-            </svg>
-            Dodaj koszt
+            <span>+ Dodaj</span>
         </button>
     </div>
 
     <div class="overflow-x-auto">
-        <table class="w-full text-left">
+        <table class="w-full text-left border-collapse">
             <thead>
-            <tr class="text-slate-400 text-xs uppercase tracking-widest font-bold">
-                <th class="pb-4 px-2">Opis</th>
-                <th class="pb-4 px-2">Netto</th>
-                <th class="pb-4 px-2">VAT</th>
-                <th class="pb-4 px-2 text-right">Usuń</th>
+            <tr class="text-slate-500 text-xs font-mono uppercase border-b border-slate-700">
+                <th class="pb-3 px-2 font-normal">Opis transakcji</th>
+                <th class="pb-3 px-2 font-normal w-32">Netto</th>
+                <th class="pb-3 px-2 font-normal w-24">VAT</th>
+                <th class="pb-3 px-2 text-right w-16"></th>
             </tr>
             </thead>
-            <tbody class="divide-y divide-slate-50">
+            <tbody class="divide-y divide-slate-700/50">
                 @for (expense of service.expenses(); track expense.id) {
-                    <tr class="group hover:bg-slate-50/50 transition-colors">
-                        <td class="py-4 px-2">
+                    <tr class="group hover:bg-slate-700/20 transition-colors">
+                        <td class="py-3 px-2">
                             <input
                                     type="text"
                                     [value]="expense.name"
                                     (input)="service.updateExpense(expense.id, 'name', getVal($event))"
-                                    class="bg-transparent border-none focus:ring-0 font-medium text-slate-700 p-0 w-full"
+                                    class="bg-transparent border-b border-transparent focus:border-emerald-500 text-slate-200 text-sm w-full outline-none py-1 placeholder-slate-600"
+                                    placeholder="Nazwa kosztu"
                             />
                         </td>
-                        <td class="py-4 px-2">
-                            <input
-                                    type="number"
-                                    [value]="expense.net"
-                                    (input)="service.updateExpense(expense.id, 'net', getNum($event))"
-                                    class="bg-transparent border-none focus:ring-0 font-bold text-slate-800 p-0 w-24"
-                            />
-                            <span class="text-slate-400 text-sm ml-1">zł</span>
+                        <td class="py-3 px-2">
+                            <div class="relative">
+                                <input
+                                        type="number"
+                                        [value]="expense.net"
+                                        (input)="service.updateExpense(expense.id, 'net', getNum($event))"
+                                        class="bg-slate-900/50 border border-slate-700 focus:border-emerald-500 rounded px-2 py-1 text-right text-slate-200 font-mono text-sm w-full outline-none"
+                                />
+                            </div>
                         </td>
-                        <td class="py-4 px-2">
+                        <td class="py-3 px-2">
                             <select
                                     (change)="service.updateExpense(expense.id, 'vat', getNum($event))"
-                                    class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer hover:bg-slate-100"
+                                    class="bg-slate-900/50 border border-slate-700 rounded px-1 py-1 text-slate-300 text-xs w-full outline-none focus:border-emerald-500"
                             >
                                 <option [value]="23" [selected]="expense.vat == 23">23%</option>
                                 <option [value]="8" [selected]="expense.vat == 8">8%</option>
                                 <option [value]="0" [selected]="expense.vat == 0">0%</option>
                             </select>
                         </td>
-                        <td class="py-4 px-2 text-right">
+                        <td class="py-3 px-2 text-right">
                             <button
                                     (click)="service.removeExpense(expense.id)"
-                                    class="p-2 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                                    class="text-slate-600 hover:text-rose-500 transition-colors"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                                     fill="none"
-                                     stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                      stroke-linejoin="round">
-                                    <path d="M3 6h18"/>
-                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
                                 </svg>
                             </button>
                         </td>
@@ -81,5 +71,11 @@
                 }
             </tbody>
         </table>
+
+        @if (service.expenses().length === 0) {
+            <div class="text-center py-8 text-slate-600 text-xs font-mono">
+                BRAK WPISÓW W REJESTRZE KOSZTÓW
+            </div>
+        }
     </div>
 </div>

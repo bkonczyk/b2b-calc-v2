@@ -68,6 +68,7 @@ export class B2bCalculatorService {
 
         const totalExpensesNet = exps.reduce((sum, e) => sum + e.net, 0);
         const totalExpensesVat = exps.reduce((sum, e) => sum + (e.net * e.vat) / 100, 0);
+        const vatToPay = vatAmount - totalExpensesVat;
 
         // Podatek dochodowy
         let incomeTax = 0;
@@ -110,6 +111,7 @@ export class B2bCalculatorService {
         console.log("incomeTax", incomeTax)
         console.log("totalExpensesNet", totalExpensesNet)
         console.log("totalExpensesVat", totalExpensesVat)
+        console.log("vatToPay", vatToPay)
         console.log("netTakeHome", netTakeHome)
 
         return {
@@ -121,6 +123,7 @@ export class B2bCalculatorService {
             incomeTax,
             totalExpensesNet,
             totalExpensesVat,
+            vatToPay,
             netTakeHome
         };
     });

@@ -1,24 +1,33 @@
-<nav class="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-slate-200">
+<nav class="w-full bg-slate-900 border-b border-slate-800">
     <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-            <div class="bg-indigo-600 p-2 rounded-lg shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>
+        <div class="flex items-center gap-3">
+            <div class="bg-emerald-500 p-1.5 rounded-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                     stroke="black" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2v20"/>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
             </div>
-            <span class="text-xl font-bold tracking-tight text-slate-800">
-            Kalkb2b<span class="text-indigo-600">.pl</span>
+            <span class="text-xl font-bold tracking-tight text-white">
+            B2B<span class="text-emerald-400">Fintech</span>
           </span>
         </div>
 
-        <div class="hidden md:flex items-center gap-8">
-            <button class="text-slate-600 hover:text-indigo-600 font-medium transition-colors">Kalkulator</button>
+        <div class="hidden md:flex items-center gap-6">
+            <!--            <span class="text-xs text-slate-500 font-mono uppercase tracking-widest">Wersja 2.0.25</span>-->
+            <!--            <div class="h-4 w-px bg-slate-700"></div>-->
             <div class="relative group">
-                <button class="bg-indigo-600 text-white px-5 py-2 rounded-full font-medium group-hover:bg-slate-400 transition-all shadow-md active:scale-95 transform cursor-not-allowed">
-                    Eksportuj PDF
+                <button class="text-slate-400 hover:text-emerald-400 transition-colors text-sm font-medium cursor-not-allowed">
+                    Eksport PDF
                 </button>
                 <div class="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
                     dostępne wkrótce
                 </div>
             </div>
+
+            <button class="text-slate-400 hover:text-emerald-400 transition-colors text-sm font-medium">
+                Kontakt
+            </button>
         </div>
     </div>
 </nav>

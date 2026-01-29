@@ -22,7 +22,7 @@ export class ParametersFormComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.subscription = this.incomeInput$.pipe(
-      debounceTime(300) // Opóźnienie 400ms
+      debounceTime(300)
     ).subscribe(value => {
       this.service.setIncome(value);
     });

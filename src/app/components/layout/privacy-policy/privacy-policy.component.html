@@ -1,0 +1,61 @@
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" *ngIf="isVisible" (click)="closePolicy()">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-fade-in-up" (click)="$event.stopPropagation()">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-900/50">
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <span class="text-2xl">🔒</span> Polityka Prywatności
+            </h2>
+            <button (click)="closePolicy()" class="text-slate-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-slate-800">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Content -->
+        <div class="p-6 overflow-y-auto text-slate-300 space-y-6 custom-scrollbar">
+            <section>
+                <h3 class="text-lg font-semibold text-emerald-400 mb-2">1. Informacje ogólne</h3>
+                <p class="text-sm leading-relaxed">
+                    Niniejsza Polityka Prywatności określa zasady przetwarzania i ochrony danych osobowych przekazanych przez Użytkowników w związku z korzystaniem z Kalkulatora B2B.
+                    Administratorem danych jest właściciel serwisu.
+                </p>
+            </section>
+
+            <section>
+                <h3 class="text-lg font-semibold text-emerald-400 mb-2">2. Jakie dane zbieramy?</h3>
+                <p class="text-sm leading-relaxed">
+                    Aplikacja zbiera wyłącznie dane niezbędne do przeprowadzenia obliczeń podatkowych, takie jak:
+                </p>
+                <ul class="list-disc list-inside mt-2 text-sm space-y-1 ml-2 text-slate-400">
+                    <li>Kwota przychodu netto</li>
+                    <li>Wybrana forma opodatkowania</li>
+                    <li>Preferencje dotyczące składek ZUS</li>
+                    <li>Koszty prowadzenia działalności</li>
+                </ul>
+                <p class="text-sm leading-relaxed mt-2">
+                    Dane te są zapisywane lokalnie w Twojej przeglądarce (pliki cookies/localStorage) w celu zapamiętania ustawień pomiędzy sesjami. Nie są one przesyłane na nasze serwery ani udostępniane podmiotom trzecim.
+                </p>
+            </section>
+
+            <section>
+                <h3 class="text-lg font-semibold text-emerald-400 mb-2">3. Pliki Cookies</h3>
+                <p class="text-sm leading-relaxed">
+                    Stosujemy pliki cookies w celu zapewnienia poprawnego działania serwisu oraz zapamiętywania wprowadzonych przez Ciebie danych.
+                    Korzystając z serwisu wyrażasz zgodę na ich używanie. Możesz w każdej chwili zmienić ustawienia swojej przeglądarki lub wycofać zgodę poniżej.
+                </p>
+            </section>
+        </div>
+
+        <!-- Footer -->
+        <div class="p-6 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-3">
+            <button (click)="revokeConsent()" class="px-4 py-2 text-sm font-medium text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg hover:bg-red-400/20 transition-colors">
+                Wycofaj zgody i usuń dane
+            </button>
+            <button (click)="closePolicy()" class="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500 transition-colors shadow-lg shadow-emerald-900/20">
+                Zamknij
+            </button>
+        </div>
+    </div>
+</div>

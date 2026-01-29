@@ -1,0 +1,16 @@
+<div class="cookie-consent-overlay" *ngIf="isVisible">
+  <div class="cookie-consent-modal">
+    <div class="cookie-icon">
+      🍪
+    </div>
+    <h2>Szanujemy Twoją prywatność</h2>
+    <p>
+      Używamy plików cookie, aby zapewnić Ci najlepszą jakość korzystania z naszej aplikacji.
+      Dzięki nim możemy zapamiętać Twoje ustawienia kalkulatora oraz personalizować reklamy.
+    </p>
+    <div class="cookie-actions">
+      <button class="btn-decline" (click)="declineCookies()">Odrzuć</button>
+      <button class="btn-accept" (click)="acceptCookies()">Akceptuję wszystkie</button>
+    </div>
+  </div>
+</div>

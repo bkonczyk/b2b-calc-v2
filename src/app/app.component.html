@@ -28,5 +28,10 @@
         </div>
     </main>
 
-    <app-footer />
+    <app-footer (openPrivacyPolicy)="togglePrivacyPolicy(true)" />
+    <app-cookie-consent />
+    <app-privacy-policy
+        [isVisible]="isPrivacyPolicyVisible"
+        (closeEvent)="togglePrivacyPolicy(false)"
+    />
 </div>

@@ -20,14 +20,42 @@ export class B2bCalculatorService {
     readonly hasSickness = signal(JSON.parse(this.cookie.get(COOKIE_PREFIX + 'hasSickness') || 'false'));
     readonly expenses = signal<Expense[]>(JSON.parse(this.cookie.get(COOKIE_PREFIX + 'expenses') || '[]'));
 
+    // Sygnał sterujący zgodą na zapis cookies (domyślnie false lub odczyt z istniejącej zgody)
+    readonly cookiesAllowed = signal(this.cookie.get('cookie_consent') === 'true');
+
     constructor() {
         // Efekt do automatycznego zapisu w cookies przy zmianie wartości
-        effect(() => this.cookie.set(COOKIE_PREFIX + 'income', this.income().toString()));
-        effect(() => this.cookie.set(COOKIE_PREFIX + 'vatRate', this.vatRate().toString()));
-        effect(() => this.cookie.set(COOKIE_PREFIX + 'taxForm', this.taxForm()));
-        effect(() => this.cookie.set(COOKIE_PREFIX + 'zusType', this.zusType()));
-        effect(() => this.cookie.set(COOKIE_PREFIX + 'hasSickness', JSON.stringify(this.hasSickness())));
-        effect(() => this.cookie.set(COOKIE_PREFIX + 'expenses', JSON.stringify(this.expenses())));
+        // Zapisujemy TYLKO jeśli użytkownik wyraził zgodę (cookiesAllowed jest true)
+        effect(() => {
+            if (this.cookiesAllowed()) {
+                this.cookie.set(COOKIE_PREFIX + 'income', this.income().toString());
+            }
+        });
+        effect(() => {
+            if (this.cookiesAllowed()) {
+                this.cookie.set(COOKIE_PREFIX + 'vatRate', this.vatRate().toString());
+            }
+        });
+        effect(() => {
+            if (this.cookiesAllowed()) {
+                this.cookie.set(COOKIE_PREFIX + 'taxForm', this.taxForm());
+            }
+        });
+        effect(() => {
+            if (this.cookiesAllowed()) {
+                this.cookie.set(COOKIE_PREFIX + 'zusType', this.zusType());
+            }
+        });
+        effect(() => {
+            if (this.cookiesAllowed()) {
+                this.cookie.set(COOKIE_PREFIX + 'hasSickness', JSON.stringify(this.hasSickness()));
+            }
+        });
+        effect(() => {
+            if (this.cookiesAllowed()) {
+                this.cookie.set(COOKIE_PREFIX + 'expenses', JSON.stringify(this.expenses()));
+            }
+        });
 
         if (this.expenses().length === 0) {
             this.expenses.set([
@@ -196,5 +224,28 @@ export class B2bCalculatorService {
 
     removeExpense(id: number) {
         this.expenses.update(prev => prev.filter(e => e.id !== id));
+    }
+
+    // Metoda do wywołania z poziomu komponentu bannera cookies
+    acceptCookies() {
+        this.cookie.set('cookie_consent', 'true');
+        this.cookiesAllowed.set(true);
+    }
+
+    // Metoda do wycofania zgody (wymóg RODO)
+    withdrawConsent() {
+        // 1. Usuwamy znacznik zgody
+        this.cookie.delete('cookie_consent');
+
+        // 2. Opcjonalnie: Czyścimy zapisane dane, aby szanować decyzję użytkownika
+        this.cookie.delete(COOKIE_PREFIX + 'income');
+        this.cookie.delete(COOKIE_PREFIX + 'vatRate');
+        this.cookie.delete(COOKIE_PREFIX + 'taxForm');
+        this.cookie.delete(COOKIE_PREFIX + 'zusType');
+        this.cookie.delete(COOKIE_PREFIX + 'hasSickness');
+        this.cookie.delete(COOKIE_PREFIX + 'expenses');
+
+        // 3. Aktualizujemy sygnał, co zatrzyma działanie efektów zapisujących
+        this.cookiesAllowed.set(false);
     }
 }

@@ -1,5 +1,4 @@
-import {Component} from '@angular/core';
-
+import {Component, EventEmitter, Output} from '@angular/core';
 
 @Component({
     selector: 'app-footer',
@@ -8,5 +7,10 @@ import {Component} from '@angular/core';
     styleUrl: './footer.component.scss',
 })
 export class FooterComponent {
+    @Output() openPrivacyPolicy = new EventEmitter<void>();
 
+    onPrivacyPolicyClick(event: Event) {
+        event.preventDefault();
+        this.openPrivacyPolicy.emit();
+    }
 }

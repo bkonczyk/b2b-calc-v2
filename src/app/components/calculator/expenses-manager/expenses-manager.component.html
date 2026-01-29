@@ -55,13 +55,12 @@
                         </td>
                         <td class="py-4 px-2">
                             <select
-                                    [value]="expense.vat"
                                     (change)="service.updateExpense(expense.id, 'vat', getNum($event))"
-                                    class="bg-transparent border-none focus:ring-0 text-slate-500 text-sm p-0"
+                                    class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-slate-700 text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all cursor-pointer hover:bg-slate-100"
                             >
-                                <option [value]="23">23%</option>
-                                <option [value]="8">8%</option>
-                                <option [value]="0">0%</option>
+                                <option [value]="23" [selected]="expense.vat == 23">23%</option>
+                                <option [value]="8" [selected]="expense.vat == 8">8%</option>
+                                <option [value]="0" [selected]="expense.vat == 0">0%</option>
                             </select>
                         </td>
                         <td class="py-4 px-2 text-right">
@@ -70,7 +69,8 @@
                                     class="p-2 text-slate-300 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                     fill="none"
+                                     stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                      stroke-linejoin="round">
                                     <path d="M3 6h18"/>
                                     <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>

@@ -27,7 +27,7 @@
 
         <!-- Kolumna ZUS -->
         <div class="p-6 border-b md:border-b-0 md:border-r border-slate-100 space-y-4">
-            <h4 class="text-xs font-bold text-rose-500 uppercase">Obciążenia ZUS</h4>
+            <h4 class="text-xs font-bold text-rose-500 uppercase">Składki ZUS</h4>
             <div class="flex justify-between items-center text-sm">
                 <span class="text-slate-500">Zdrowotna</span>
                 <span class="font-semibold text-slate-700">{{ service.results().healthZus | number:'1.2-2' }} zł</span>
@@ -54,7 +54,7 @@
                 <span class="font-semibold text-slate-700">{{ service.results().totalExpensesNet | number }} zł</span>
             </div>
             <div class="pt-2 border-t border-slate-50 flex justify-between items-center text-amber-500 font-bold">
-                <span>Suma strat</span>
+                <span>Suma opłat</span>
                 <span>{{ (service.results().incomeTax + service.results().totalZus + service.results().totalExpensesNet) | number:'1.2-2' }} zł</span>
             </div>
         </div>

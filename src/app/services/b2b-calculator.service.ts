@@ -1,5 +1,6 @@
 import {Injectable, signal, computed} from '@angular/core';
-import {Expense} from '../models/b2b-types';
+import {Expense, TAX_FORM_OPTIONS} from '../models/b2b-types';
+import {ZUS_2025} from '../models/zus-2025';
 
 @Injectable({
     providedIn: 'root',
@@ -11,8 +12,8 @@ export class B2bCalculatorService {
     readonly zusType = signal('PELNY');
     readonly hasSickness = signal(false);
     readonly expenses = signal<Expense[]>([
-        {id: 1, name: 'Biuro / Coworking', net: 1500, vat: 23},
-        {id: 2, name: 'Internet i Telefon', net: 150, vat: 23},
+        {id: 1, name: 'Biuro rachunkowe', net: 200, vat: 23},
+        {id: 2, name: 'Telefon', net: 50, vat: 23},
     ]);
 
     // Logika obliczeniowa (Computed)
@@ -27,34 +28,42 @@ export class B2bCalculatorService {
         const vatAmount = (inc * vat) / 100;
         const grossTotal = inc + vatAmount;
 
-        // Stałe ZUS 2025 (Szacunkowe)
-        const BASE_SOCIAL = 1600.32;
-        const BASE_SMALL = 400.00;
-        const FP_RATE = 125.40;
-
         let socialZus = 0;
-        let fpZus = 0;
+        let fp = 0;
 
         if (zus === 'PELNY') {
-            socialZus = BASE_SOCIAL;
-            fpZus = FP_RATE;
+            socialZus = ZUS_2025.BIG_ZUS.SOCIAL;
+            fp = ZUS_2025.BIG_ZUS.FP;
+            if (sickness) {
+                socialZus += ZUS_2025.BIG_ZUS.SICKNESS;
+            }
         } else if (zus === 'MALY') {
-            socialZus = BASE_SMALL;
+            socialZus = ZUS_2025.SMALL_ZUS.SOCIAL;
+            fp = ZUS_2025.SMALL_ZUS.FP;
+            if (sickness) {
+                socialZus += ZUS_2025.SMALL_ZUS.SICKNESS;
+            }
+        } else if (zus === 'ULGA') {
+            socialZus = 0;
         }
 
-        if (sickness) socialZus += 100;
-
-        // Składka zdrowotna
+        // Składka zdrowotna 2025
         let healthZus = 0;
+        const minHealthZus = ZUS_2025.HEALTH_ZUS.MINIMAL;
+
         if (form === 'SKALA') {
-            healthZus = inc * 0.09;
+            healthZus = Math.max(minHealthZus, inc * 0.09);
         } else if (form === 'LINIOWY') {
-            healthZus = inc * 0.049;
-        } else {
-            // Ryczałt (uproszczone progi)
-            if (inc <= 5000) healthZus = 419.46;
-            else if (inc <= 25000) healthZus = 699.11;
-            else healthZus = 1258.39;
+            healthZus = Math.max(minHealthZus, inc * 0.049);
+        } else if (form.startsWith('RYCZALT')) {
+            const annualIncome = inc * 12;
+            if (annualIncome <= 60000) {
+                healthZus = ZUS_2025.HEALTH_ZUS.LUMP_SUM_THRESHOLDS.LOW;
+            } else if (annualIncome <= 300000) {
+                healthZus = ZUS_2025.HEALTH_ZUS.LUMP_SUM_THRESHOLDS.MEDIUM;
+            } else {
+                healthZus = ZUS_2025.HEALTH_ZUS.LUMP_SUM_THRESHOLDS.HIGH;
+            }
         }
 
         const totalExpensesNet = exps.reduce((sum, e) => sum + e.net, 0);
@@ -62,27 +71,52 @@ export class B2bCalculatorService {
 
         // Podatek dochodowy
         let incomeTax = 0;
-        const taxableBase = inc - (form.startsWith('RYCZALT') ? 0 : (socialZus + totalExpensesNet));
+
+        // Znajdź wybraną opcję podatkową, aby pobrać stawkę
+        const selectedTaxOption = TAX_FORM_OPTIONS.find(opt => opt.key === form);
+        const taxRate = selectedTaxOption?.rate;
 
         if (form.startsWith('RYCZALT')) {
-            const rate = parseFloat(form.split('_')[1]) / 100;
-            incomeTax = inc * rate;
+            // Używamy stawki z definicji opcji, jeśli dostępna
+            const rate = taxRate !== undefined ? taxRate : 0;
+
+            // W ryczałcie od przychodu odejmujemy ZUS społeczny
+            const taxBase = Math.max(0, inc - (socialZus - fp) - 0.5 * healthZus);
+            incomeTax = Math.round(taxBase * rate);
         } else if (form === 'LINIOWY') {
-            incomeTax = Math.max(0, taxableBase * 0.19);
-        } else {
-            const monthlyAllowance = 2500;
-            incomeTax = Math.max(0, (taxableBase * 0.12) - monthlyAllowance);
+             const taxBase = Math.max(0, inc - totalExpensesNet - socialZus);
+             // Używamy stawki z definicji (0.19) lub domyślnej
+             const rate = taxRate !== undefined ? taxRate : 0.19;
+            incomeTax = Math.round(taxBase * rate);
+        } else if (form === 'SKALA') {
+            const taxBase = Math.max(0, inc - totalExpensesNet - socialZus);
+            if (taxBase <= 10000) {
+                 incomeTax = Math.round(Math.max(0, (taxBase * 0.12) - 300));
+            } else {
+                const baseTax = (10000 * 0.12) - 300;
+                const excessTax = (taxBase - 10000) * 0.32;
+                incomeTax = Math.round(baseTax + excessTax);
+            }
         }
 
-        const totalZus = socialZus + healthZus + fpZus;
+        const totalZus = socialZus + healthZus;
         const netTakeHome = inc - totalZus - incomeTax - totalExpensesNet;
+
+        console.log("grossTotal", grossTotal)
+        console.log("vatAmount", vatAmount)
+        console.log("socialZus", socialZus)
+        console.log("healthZus", healthZus)
+        console.log("totalZus", totalZus)
+        console.log("incomeTax", incomeTax)
+        console.log("totalExpensesNet", totalExpensesNet)
+        console.log("totalExpensesVat", totalExpensesVat)
+        console.log("netTakeHome", netTakeHome)
 
         return {
             grossTotal,
             vatAmount,
             socialZus,
             healthZus,
-            fpZus,
             totalZus,
             incomeTax,
             totalExpensesNet,

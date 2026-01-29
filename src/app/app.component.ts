@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import {Component, ChangeDetectionStrategy, ViewEncapsulation} from '@angular/core';
 import { NavbarComponent } from './components/layout/navbar/navbar.component';
 import { FooterComponent } from './components/layout/footer/footer.component';
 import { ParametersFormComponent } from './components/calculator/parameters-form/parameters-form.component';
@@ -23,7 +23,17 @@ import { ExpensesManagerComponent } from './components/calculator/expenses-manag
     ResultsSummaryComponent
   ],
   templateUrl: './app.component.html', // Używamy zewnętrznego pliku
-  styleUrl: './app.component.scss',
+  encapsulation: ViewEncapsulation.None,
+  styles: [`
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+  `],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AppComponent {}

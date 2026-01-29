@@ -10,7 +10,8 @@ export const ZUS_2026 = {
         FP: 0.00
     },
     HEALTH_ZUS: {
-        MINIMAL: 432.54,
+        MINIMAL: 622.93,
+        DEDUCTION_LIMIT_LINIOWY: 14100,
         LUMP_SUM_THRESHOLDS: {
             LOW: 498.35,    // do 60 tys.
             MEDIUM: 830.58, // 60 - 300 tys.

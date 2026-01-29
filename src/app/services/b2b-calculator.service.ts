@@ -1,21 +1,41 @@
 // b2b-calculator.service.ts
-import {Injectable, signal, computed} from '@angular/core';
-import {Expense, TAX_FORM_OPTIONS} from '../models/b2b-types';
-import {ZUS_2025} from '../models/zus-2025';
+import { Injectable, signal, computed, effect, inject } from '@angular/core';
+import { Expense, TAX_FORM_OPTIONS } from '../models/b2b-types';
+import { ZUS_2025 } from '../models/zus-2025';
+import { AppCookieService } from './cookie.service'; // Import
+
+const COOKIE_PREFIX = 'b2b_calc_';
 
 @Injectable({
     providedIn: 'root',
 })
 export class B2bCalculatorService {
-    readonly income = signal(25000); // Przychód netto
-    readonly vatRate = signal(23);
-    readonly taxForm = signal('RYCZALT_12'); // RYCZALT_X, SKALA, LINIOWY
-    readonly zusType = signal('PELNY'); // PELNY, MALY, ULGA
-    readonly hasSickness = signal(false);
-    readonly expenses = signal<Expense[]>([
-        {id: 1, name: 'Biuro rachunkowe', net: 200, vat: 23},
-        {id: 2, name: 'Telefon', net: 50, vat: 23},
-    ]);
+    private cookie = inject(AppCookieService);
+
+    // Sygnały z wartościami odczytanymi z cookies lub domyślnymi
+    readonly income = signal(Number(this.cookie.get(COOKIE_PREFIX + 'income') || 25000));
+    readonly vatRate = signal(Number(this.cookie.get(COOKIE_PREFIX + 'vatRate') || 23));
+    readonly taxForm = signal(this.cookie.get(COOKIE_PREFIX + 'taxForm') || 'RYCZALT_12');
+    readonly zusType = signal(this.cookie.get(COOKIE_PREFIX + 'zusType') || 'PELNY');
+    readonly hasSickness = signal(JSON.parse(this.cookie.get(COOKIE_PREFIX + 'hasSickness') || 'false'));
+    readonly expenses = signal<Expense[]>(JSON.parse(this.cookie.get(COOKIE_PREFIX + 'expenses') || '[]'));
+
+    constructor() {
+        // Efekt do automatycznego zapisu w cookies przy zmianie wartości
+        effect(() => this.cookie.set(COOKIE_PREFIX + 'income', this.income().toString()));
+        effect(() => this.cookie.set(COOKIE_PREFIX + 'vatRate', this.vatRate().toString()));
+        effect(() => this.cookie.set(COOKIE_PREFIX + 'taxForm', this.taxForm()));
+        effect(() => this.cookie.set(COOKIE_PREFIX + 'zusType', this.zusType()));
+        effect(() => this.cookie.set(COOKIE_PREFIX + 'hasSickness', JSON.stringify(this.hasSickness())));
+        effect(() => this.cookie.set(COOKIE_PREFIX + 'expenses', JSON.stringify(this.expenses())));
+
+        if (this.expenses().length === 0) {
+            this.expenses.set([
+                {id: 1, name: 'Biuro rachunkowe', net: 200, vat: 23},
+                {id: 2, name: 'Telefon', net: 50, vat: 23},
+            ]);
+        }
+    }
 
     // Główna logika obliczeniowa
     readonly results = computed(() => {
@@ -40,7 +60,7 @@ export class B2bCalculatorService {
         }, 0);
 
         // VAT do odliczenia (tylko dla VATowców)
-        const totalExpensesVat = isVatPayer ? exps.reduce((sum, e) => sum + (e.net * e.vat) / 100, 0) : 0;
+        const totalExpensesVat = isVatPayer ? exps.reduce((sum, e) => sum + (e.net * e.vat / 100), 0) : 0;
         const vatToPay = Math.max(0, vatAmount - totalExpensesVat);
 
         // 4. Obliczenie składek ZUS Społecznego
@@ -143,9 +163,6 @@ export class B2bCalculatorService {
         const totalZus = socialZusAmount + healthZus;
 
         // 7. Wynik "Na rękę"
-        // Przychód - VAT(jeśli płatnik) - Koszty(Brutto) - Pełny ZUS - PIT
-        // Uproszczony wzór: (Przychód Netto - Podatki - Koszty Netto - ZUS)
-        // Musimy odjąć totalExpensesNet, bo to realny wydatek z kieszeni przedsiębiorcy
         const netTakeHome = inc - incomeTax - totalZus - totalExpensesNet;
 
         return {

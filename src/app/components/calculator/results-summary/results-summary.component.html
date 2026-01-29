@@ -1,29 +1,25 @@
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
     <!-- Główny wynik -->
-    <div class="bg-gradient-to-br from-emerald-900 to-slate-900 p-6 rounded-lg border border-emerald-800 relative overflow-hidden">
+    <div class="bg-gradient-to-br from-emerald-800 to-slate-800 dark:from-emerald-900 dark:to-slate-900 p-6 rounded-lg border border-emerald-600 dark:border-emerald-800 relative overflow-hidden shadow-lg dark:shadow-none transition-all duration-300">
         <div class="relative z-10">
-            <p class="text-emerald-400 text-xs font-bold uppercase tracking-widest mb-2">Dochód netto (Na rękę)</p>
+            <p class="text-emerald-300 dark:text-emerald-400 text-xs font-bold uppercase tracking-widest mb-2">Dochód netto (Na rękę)</p>
             <h3 class="text-4xl md:text-5xl font-mono font-bold text-white mb-2">
                 {{ service.results().netTakeHome | number:'1.2-2' }} <span
-                    class="text-xl text-emerald-500/50">PLN</span>
+                    class="text-xl text-emerald-300/50 dark:text-emerald-500/50">PLN</span>
             </h3>
-<!--            <div class="flex items-center gap-2 text-emerald-200/60 text-xs mt-4">-->
-<!--                <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>-->
-<!--                Wynik optymalizacji podatkowej-->
-<!--            </div>-->
         </div>
         <!-- Decorator -->
         <div class="absolute right-0 top-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
     </div>
 
     <!-- Miejsce na reklamę (Zastępuje VAT do zapłaty) -->
-    <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 flex flex-col justify-center items-center relative min-h-[160px] overflow-hidden group">
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col justify-center items-center relative min-h-[160px] overflow-hidden group shadow-sm dark:shadow-none transition-colors duration-300">
         <!-- Oznaczenie reklamy -->
-        <span class="absolute top-2 right-2 text-[10px] text-slate-600 font-mono uppercase tracking-widest group-hover:text-slate-500 transition-colors">Reklama</span>
+        <span class="absolute top-2 right-2 text-[10px] text-slate-400 dark:text-slate-600 font-mono uppercase tracking-widest group-hover:text-slate-500 transition-colors">Reklama</span>
 
         <!-- Placeholder wizualny (Symulacja bannera) -->
-        <div class="w-full h-full flex flex-col items-center justify-center text-slate-500 gap-3 border-2 border-dashed border-slate-700/50 rounded-md p-4 bg-slate-900/30">
-            <div class="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center">
+        <div class="w-full h-full flex flex-col items-center justify-center text-slate-500 gap-3 border-2 border-dashed border-slate-200 dark:border-slate-700/50 rounded-md p-4 bg-slate-50 dark:bg-slate-900/30 transition-colors">
+            <div class="w-12 h-12 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm dark:shadow-none">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                      stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
                      class="opacity-40 text-emerald-500">
@@ -31,8 +27,8 @@
                 </svg>
             </div>
             <div class="text-center">
-                <p class="text-xs font-mono mb-1 text-slate-400">Google AdSense Space</p>
-                <p class="text-[10px] text-slate-600">Responsive Display Ad</p>
+                <p class="text-xs font-mono mb-1 text-slate-500 dark:text-slate-400">Google AdSense Space</p>
+                <p class="text-[10px] text-slate-400 dark:text-slate-600">Responsive Display Ad</p>
             </div>
         </div>
     </div>

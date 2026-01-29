@@ -1,26 +1,26 @@
 <div class="space-y-6">
-    <section class="bg-slate-800 p-6 rounded-lg border border-slate-700">
-        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+    <section class="bg-white dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none transition-colors duration-300">
+        <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
             <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
             Konfiguracja Przychodu
         </h3>
 
         <div class="space-y-6">
             <div class="group">
-                <label class="block text-xs text-slate-400 mb-1.5 ml-1">Przychód miesięczny (Netto)</label>
+                <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1.5 ml-1">Przychód miesięczny (Netto)</label>
                 <div class="relative">
                     <input
                             type="number"
                             [value]="service.income()"
                             (input)="onIncomeInput($event)"
-                            class="w-full bg-slate-900 border border-slate-700 text-white rounded-md px-4 py-3 text-lg font-mono focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                            class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-md px-4 py-3 text-lg font-mono focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
                     />
-                    <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-mono text-sm">PLN</span>
+                    <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 font-mono text-sm">PLN</span>
                 </div>
             </div>
 
             <div>
-                <label class="block text-xs text-slate-400 mb-1.5 ml-1">Stawka VAT</label>
+                <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1.5 ml-1">Stawka VAT</label>
                 <div class="grid grid-cols-3 gap-2">
                     <button
                             *ngFor="let rate of [23, 8, 0]"
@@ -28,10 +28,13 @@
                             [class.bg-emerald-600]="service.vatRate() === rate"
                             [class.text-white]="service.vatRate() === rate"
                             [class.border-emerald-500]="service.vatRate() === rate"
-                            [class.bg-slate-900]="service.vatRate() !== rate"
-                            [class.text-slate-400]="service.vatRate() !== rate"
-                            [class.border-slate-700]="service.vatRate() !== rate"
-                            class="border rounded-md py-2 text-sm font-mono transition-all hover:bg-slate-700"
+                            [class.bg-slate-50]="service.vatRate() !== rate"
+                            [class.dark:bg-slate-900]="service.vatRate() !== rate"
+                            [class.text-slate-600]="service.vatRate() !== rate"
+                            [class.dark:text-slate-400]="service.vatRate() !== rate"
+                            [class.border-slate-200]="service.vatRate() !== rate"
+                            [class.dark:border-slate-700]="service.vatRate() !== rate"
+                            class="border rounded-md py-2 text-sm font-mono transition-all hover:bg-slate-100 dark:hover:bg-slate-700"
                     >
                         {{ rate }}%
                     </button>
@@ -39,11 +42,11 @@
             </div>
 
             <div>
-                <label class="block text-xs text-slate-400 mb-1.5 ml-1">Forma opodatkowania</label>
+                <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1.5 ml-1">Forma opodatkowania</label>
                 <select
                         [value]="service.taxForm()"
                         (change)="service.setTaxForm(getStringValue($event))"
-                        class="w-full bg-slate-900 border border-slate-700 text-slate-200 rounded-md px-4 py-3 text-sm focus:ring-1 focus:ring-emerald-500 outline-none appearance-none"
+                        class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-200 rounded-md px-4 py-3 text-sm focus:ring-1 focus:ring-emerald-500 outline-none appearance-none transition-colors"
                 >
                     @for (form of taxOptions; track form.key) {
                         <option [value]="form.key">{{ form.label }}</option>
@@ -53,8 +56,8 @@
         </div>
     </section>
 
-    <section class="bg-slate-800 p-6 rounded-lg border border-slate-700">
-        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+    <section class="bg-white dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none transition-colors duration-300">
+        <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
             <span class="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
             Konfiguracja ZUS
         </h3>
@@ -62,13 +65,13 @@
         <div class="space-y-3">
             @for (zus of zusOptions; track zus.key) {
                 <label
-                        class="flex items-center p-3 rounded-md border cursor-pointer transition-all hover:bg-slate-700/50"
+                        class="flex items-center p-3 rounded-md border cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-slate-700/50"
                         [ngClass]="{
-                'bg-slate-900 border-slate-700': service.zusType() !== zus.key,
-                'bg-blue-900/20 border-blue-500': service.zusType() === zus.key
+                'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700': service.zusType() !== zus.key,
+                'bg-blue-50 dark:bg-blue-900/20 border-blue-500': service.zusType() === zus.key
               }"
                 >
-                    <div class="relative flex items-center justify-center w-5 h-5 rounded-full border border-slate-500 mr-3"
+                    <div class="relative flex items-center justify-center w-5 h-5 rounded-full border border-slate-400 dark:border-slate-500 mr-3"
                          [class.border-blue-500]="service.zusType() === zus.key">
                         <div class="w-2.5 h-2.5 rounded-full bg-blue-500 transition-transform scale-0"
                              [class.scale-100]="service.zusType() === zus.key"></div>
@@ -80,21 +83,21 @@
                             [checked]="service.zusType() === zus.key"
                             (change)="service.setZusType(zus.key)"
                     />
-                    <span class="text-sm font-medium text-slate-300">{{ zus.label }}</span>
+                    <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ zus.label }}</span>
                 </label>
             }
 
-            <div class="pt-4 mt-2 border-t border-slate-700">
+            <div class="pt-4 mt-2 border-t border-slate-200 dark:border-slate-700">
                 <label class="flex items-center justify-between cursor-pointer group">
-                    <span class="text-sm text-slate-400 group-hover:text-white transition-colors">Dobrowolne chorobowe</span>
-                    <div class="relative w-11 h-6 bg-slate-700 rounded-full transition-colors" [class.bg-emerald-600]="service.hasSickness()">
+                    <span class="text-sm text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Dobrowolne chorobowe</span>
+                    <div class="relative w-11 h-6 bg-slate-200 dark:bg-slate-700 rounded-full transition-colors" [class.bg-emerald-600]="service.hasSickness()" [class.dark:bg-emerald-600]="service.hasSickness()">
                         <input
                                 type="checkbox"
                                 class="sr-only"
                                 [checked]="service.hasSickness()"
                                 (change)="service.toggleSickness()"
                         />
-                        <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform" [class.translate-x-5]="service.hasSickness()"></div>
+                        <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform shadow-sm" [class.translate-x-5]="service.hasSickness()"></div>
                     </div>
                 </label>
             </div>

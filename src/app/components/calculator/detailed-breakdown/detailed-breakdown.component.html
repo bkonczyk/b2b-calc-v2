@@ -1,7 +1,8 @@
-<div class="bg-slate-800 rounded-lg border border-slate-700 overflow-hidden">
-    <div class="p-4 bg-slate-900/50 border-b border-slate-700 flex justify-between items-center">
-        <h3 class="text-xs font-bold text-slate-300 uppercase tracking-widest">Analiza przepływów</h3>
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="gray"
+<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm dark:shadow-none transition-colors duration-300">
+    <div class="p-4 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+        <h3 class="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">Analiza przepływów</h3>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             class="text-slate-400 dark:text-gray-500"
              stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="12" x2="12" y1="20" y2="10"/>
             <line x1="18" x2="18" y1="20" y2="4"/>
@@ -9,85 +10,81 @@
         </svg>
     </div>
 
-    <div class="divide-y divide-slate-700">
+    <div class="divide-y divide-slate-200 dark:divide-slate-700">
         <!-- Row 1: Przychód -->
-        <div class="p-4 flex flex-col md:flex-row justify-between items-center gap-2 hover:bg-slate-700/30 transition-colors">
+        <div class="p-4 flex flex-col md:flex-row justify-between items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
             <div class="flex items-center gap-3 w-full md:w-auto">
-                <div class="p-2 bg-slate-900 rounded text-slate-400">F</div>
+                <div class="p-2 bg-slate-100 dark:bg-slate-900 rounded text-slate-500 dark:text-slate-400 font-mono text-sm">F</div>
                 <div>
-                    <p class="text-sm text-slate-200 font-medium">BRUTTO</p>
+                    <p class="text-sm text-slate-800 dark:text-slate-200 font-medium">BRUTTO</p>
                     <p class="text-xs text-slate-500">Kwota brutto na fakturze</p>
                 </div>
             </div>
             <div class="text-right">
-                <p class="font-mono text-white text-lg">{{ service.results().grossTotal | number }} zł</p>
+                <p class="font-mono text-slate-900 dark:text-white text-lg">{{ service.results().grossTotal | number }} zł</p>
                 <p class="text-xs text-slate-500 font-mono">VAT: {{ service.results().vatAmount | number:'1.2-2' }}</p>
             </div>
         </div>
 
         <!-- Row 2: ZUS -->
-        <div class="p-4 flex flex-col md:flex-row justify-between items-center gap-2 hover:bg-slate-700/30 transition-colors">
+        <div class="p-4 flex flex-col md:flex-row justify-between items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
             <div class="flex items-center gap-3 w-full md:w-auto">
-                <div class="p-2 bg-slate-900 rounded text-rose-500">Z</div>
+                <div class="p-2 bg-slate-100 dark:bg-slate-900 rounded text-rose-500 font-mono text-sm">Z</div>
                 <div>
-                    <p class="text-sm text-slate-200 font-medium">Składki ZUS</p>
+                    <p class="text-sm text-slate-800 dark:text-slate-200 font-medium">Składki ZUS</p>
                     <p class="text-xs text-slate-500">Zdrowotna + Społeczne</p>
                 </div>
             </div>
             <div class="text-right">
-                <p class="font-mono text-rose-400 text-lg">-{{ service.results().totalZus | number:'1.2-2' }} zł</p>
+                <p class="font-mono text-rose-500 dark:text-rose-400 text-lg">-{{ service.results().totalZus | number:'1.2-2' }} zł</p>
                 <p class="text-xs text-slate-500 font-mono">
                     Zdrowotna: {{ service.results().healthZus | number:'1.2-2' }}</p>
             </div>
         </div>
 
         <!-- Row 3: Podatek -->
-        <div class="p-4 flex flex-col md:flex-row justify-between items-center gap-2 hover:bg-slate-700/30 transition-colors">
+        <div class="p-4 flex flex-col md:flex-row justify-between items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
             <div class="flex items-center gap-3 w-full md:w-auto">
-                <div class="p-2 bg-slate-900 rounded text-amber-500">P</div>
+                <div class="p-2 bg-slate-100 dark:bg-slate-900 rounded text-amber-500 font-mono text-sm">P</div>
                 <div>
-                    <p class="text-sm text-slate-200 font-medium">Podatek Dochodowy</p>
+                    <p class="text-sm text-slate-800 dark:text-slate-200 font-medium">Podatek Dochodowy</p>
                     <p class="text-xs text-slate-500">PIT</p>
                 </div>
             </div>
-            <p class="font-mono text-amber-400 text-lg">-{{ service.results().incomeTax | number:'1.2-2' }} zł</p>
+            <p class="font-mono text-amber-500 dark:text-amber-400 text-lg">-{{ service.results().incomeTax | number:'1.2-2' }} zł</p>
         </div>
 
         <!-- Row 4: VAT do zapłaty -->
         @if (service.vatRate() > 0) {
-            <div class="p-4 flex flex-col md:flex-row justify-between items-center gap-2 hover:bg-slate-700/30 transition-colors">
+            <div class="p-4 flex flex-col md:flex-row justify-between items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
                 <div class="flex items-center gap-3 w-full md:w-auto">
-                    <div class="p-2 bg-slate-900 rounded text-purple-500">V</div>
+                    <div class="p-2 bg-slate-100 dark:bg-slate-900 rounded text-purple-500 font-mono text-sm">V</div>
                     <div>
-                        <p class="text-sm text-slate-200 font-medium">VAT do zapłaty</p>
-                        <!--                    <p class="text-xs text-slate-500">Rozliczenie z US</p>-->
+                        <p class="text-sm text-slate-800 dark:text-slate-200 font-medium">VAT do zapłaty</p>
                     </div>
                 </div>
                 <div class="text-right">
                     <p class="font-mono text-lg"
-                       [ngClass]="service.results().vatToPay > 0 ? 'text-rose-400' : 'text-emerald-400'">
+                       [ngClass]="service.results().vatToPay > 0 ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-500 dark:text-emerald-400'">
                         {{ service.results().vatToPay > 0 ? '-' : '+' }}{{ service.results().vatToPay < 0 ? (service.results().vatToPay * -1 | number:'1.2-2') : (service.results().vatToPay | number:'1.2-2') }}
                         zł
                     </p>
                     <p class="text-xs text-slate-500 font-mono">
                         Odliczenie: {{ service.results().vatAmount - service.results().vatToPay | number:'1.2-2' }}</p>
-                    <p class="text-xs text-slate-500 font-mono">
-                        <!--                        {{ service.results().vatToPay > 0 ? 'Należny' : 'Nadpłata' }}-->
-                    </p>
                 </div>
             </div>
         }
 
-        <!-- Row 4: Koszty -->
-        <div class="p-4 flex flex-col md:flex-row justify-between items-center gap-2 hover:bg-slate-700/30 transition-colors">
+        <!-- Row 5: Koszty -->
+        <div class="p-4 flex flex-col md:flex-row justify-between items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
             <div class="flex items-center gap-3 w-full md:w-auto">
-                <div class="p-2 bg-slate-900 rounded text-blue-500">K</div>
+                <div class="p-2 bg-slate-100 dark:bg-slate-900 rounded text-blue-500 font-mono text-sm">K</div>
                 <div>
-                    <p class="text-sm text-slate-200 font-medium">Koszty firmowe</p>
+                    <p class="text-sm text-slate-800 dark:text-slate-200 font-medium">Koszty firmowe</p>
                     <p class="text-xs text-slate-500">Suma wydatków</p>
                 </div>
             </div>
-            <p class="font-mono text-blue-400 text-lg">-{{ service.results().totalExpensesNet | number }} zł</p>
+            <p class="font-mono text-blue-500 dark:text-blue-400 text-lg">-{{ service.results().totalExpensesNet | number }} zł</p>
         </div>
     </div>
 </div>

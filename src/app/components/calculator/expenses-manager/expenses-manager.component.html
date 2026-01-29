@@ -1,12 +1,12 @@
-<div class="bg-slate-800 rounded-lg border border-slate-700 p-6">
+<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 shadow-sm dark:shadow-none transition-colors duration-300">
     <div class="flex justify-between items-center mb-6">
-        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+        <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
             <span class="w-1.5 h-1.5 bg-orange-500 rounded-full"></span>
             Rejestr Kosztów
         </h3>
         <button
                 (click)="service.addExpense()"
-                class="bg-slate-700 hover:bg-emerald-600 text-white text-xs font-bold uppercase tracking-wider py-2 px-4 rounded transition-all flex items-center gap-2"
+                class="bg-slate-800 hover:bg-emerald-600 dark:bg-slate-700 dark:hover:bg-emerald-600 text-white text-xs font-bold uppercase tracking-wider py-2 px-4 rounded transition-all flex items-center gap-2"
         >
             <span>+ Dodaj</span>
         </button>
@@ -15,22 +15,22 @@
     <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
             <thead>
-            <tr class="text-slate-500 text-xs font-mono uppercase border-b border-slate-700">
+            <tr class="text-slate-500 dark:text-slate-500 text-xs font-mono uppercase border-b border-slate-200 dark:border-slate-700">
                 <th class="pb-3 px-2 font-normal">Opis transakcji</th>
                 <th class="pb-3 px-2 font-normal w-32">Netto</th>
                 <th class="pb-3 px-2 font-normal w-24">VAT</th>
                 <th class="pb-3 px-2 text-right w-16"></th>
             </tr>
             </thead>
-            <tbody class="divide-y divide-slate-700/50">
+            <tbody class="divide-y divide-slate-200 dark:divide-slate-700/50">
                 @for (expense of service.expenses(); track expense.id) {
-                    <tr class="group hover:bg-slate-700/20 transition-colors">
+                    <tr class="group hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors">
                         <td class="py-3 px-2">
                             <input
                                     type="text"
                                     [value]="expense.name"
                                     (input)="service.updateExpense(expense.id, 'name', getVal($event))"
-                                    class="bg-transparent border-b border-transparent focus:border-emerald-500 text-slate-200 text-sm w-full outline-none py-1 placeholder-slate-600"
+                                    class="bg-transparent border-b border-transparent focus:border-emerald-500 text-slate-800 dark:text-slate-200 text-sm w-full outline-none py-1 placeholder-slate-500 dark:placeholder-slate-600"
                                     placeholder="Nazwa kosztu"
                             />
                         </td>
@@ -40,14 +40,14 @@
                                         type="number"
                                         [value]="expense.net"
                                         (input)="service.updateExpense(expense.id, 'net', getNum($event))"
-                                        class="bg-slate-900/50 border border-slate-700 focus:border-emerald-500 rounded px-2 py-1 text-right text-slate-200 font-mono text-sm w-full outline-none"
+                                        class="bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 rounded px-2 py-1 text-right text-slate-800 dark:text-slate-200 font-mono text-sm w-full outline-none"
                                 />
                             </div>
                         </td>
                         <td class="py-3 px-2">
                             <select
                                     (change)="service.updateExpense(expense.id, 'vat', getNum($event))"
-                                    class="bg-slate-900/50 border border-slate-700 rounded px-1 py-1 text-slate-300 text-xs w-full outline-none focus:border-emerald-500"
+                                    class="bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-1 py-1 text-slate-800 dark:text-slate-300 text-xs w-full outline-none focus:border-emerald-500"
                             >
                                 <option [value]="23" [selected]="expense.vat == 23">23%</option>
                                 <option [value]="8" [selected]="expense.vat == 8">8%</option>
@@ -57,7 +57,7 @@
                         <td class="py-3 px-2 text-right">
                             <button
                                     (click)="service.removeExpense(expense.id)"
-                                    class="text-slate-600 hover:text-rose-500 transition-colors"
+                                    class="text-slate-400 dark:text-slate-600 hover:text-rose-500 transition-colors"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                                      fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -73,7 +73,7 @@
         </table>
 
         @if (service.expenses().length === 0) {
-            <div class="text-center py-8 text-slate-600 text-xs font-mono">
+            <div class="text-center py-8 text-slate-500 dark:text-slate-600 text-xs font-mono">
                 BRAK WPISÓW W REJESTRZE KOSZTÓW
             </div>
         }

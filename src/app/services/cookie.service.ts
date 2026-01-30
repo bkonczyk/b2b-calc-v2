@@ -1,15 +1,22 @@
-import { Injectable } from '@angular/core';
+import { Injectable, signal } from '@angular/core';
 import { CookieService } from 'ngx-cookie-service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AppCookieService {
+  // Sygnał informujący, czy użytkownik wyraził zgodę
+  readonly consentGranted = signal(false);
 
-  constructor(private cookieService: CookieService) { }
+  constructor(private cookieService: CookieService) {
+    // Sprawdź przy starcie, czy zgoda już istnieje
+    const hasConsent = this.cookieService.check('cookie_consent') && this.cookieService.get('cookie_consent') === 'true';
+    this.consentGranted.set(hasConsent);
+  }
 
   public set(name: string, value: string): void {
-    this.cookieService.set(name, value);
+    // Ustawiamy cookie na 365 dni i dla całej domeny ('/')
+    this.cookieService.set(name, value, 365, '/');
   }
 
   public get(name: string): string {
@@ -21,6 +28,17 @@ export class AppCookieService {
   }
 
   public delete(name: string): void {
-    this.cookieService.delete(name);
+    this.cookieService.delete(name, '/');
+  }
+
+  // Metody do zarządzania zgodą
+  public acceptConsent(): void {
+    this.set('cookie_consent', 'true');
+    this.consentGranted.set(true);
+  }
+
+  public declineConsent(): void {
+    this.set('cookie_consent', 'false');
+    this.consentGranted.set(false);
   }
 }

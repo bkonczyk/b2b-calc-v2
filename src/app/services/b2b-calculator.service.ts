@@ -1,7 +1,7 @@
 // b2b-calculator.service.ts
 import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { Expense, TAX_FORM_OPTIONS } from '../models/b2b-types';
-import { ZUS_2026 } from '../models/zus-2026';
+import { ZUS_2025 } from '../models/zus-2025';
 import { AppCookieService } from './cookie.service'; // Import
 
 const COOKIE_PREFIX = 'b2b_calc_';
@@ -13,50 +13,27 @@ export class B2bCalculatorService {
     private cookie = inject(AppCookieService);
 
     // Sygnały z wartościami odczytanymi z cookies lub domyślnymi
-    readonly income = signal(Number(this.cookie.get(COOKIE_PREFIX + 'income') || 25000));
-    readonly vatRate = signal(Number(this.cookie.get(COOKIE_PREFIX + 'vatRate') || 23));
-    readonly taxForm = signal(this.cookie.get(COOKIE_PREFIX + 'taxForm') || 'RYCZALT_12');
-    readonly zusType = signal(this.cookie.get(COOKIE_PREFIX + 'zusType') || 'PELNY');
-    readonly hasSickness = signal(JSON.parse(this.cookie.get(COOKIE_PREFIX + 'hasSickness') || 'false'));
-    readonly expenses = signal<Expense[]>(JSON.parse(this.cookie.get(COOKIE_PREFIX + 'expenses') || '[]'));
-
-    // Sygnał sterujący zgodą na zapis cookies (domyślnie false lub odczyt z istniejącej zgody)
-    readonly cookiesAllowed = signal(this.cookie.get('cookie_consent') === 'true');
+    readonly income = signal(this.cookie.consentGranted() ? Number(this.cookie.get(COOKIE_PREFIX + 'income') || 25000) : 25000);
+    readonly vatRate = signal(this.cookie.consentGranted() ? Number(this.cookie.get(COOKIE_PREFIX + 'vatRate') || 23) : 23);
+    readonly taxForm = signal(this.cookie.consentGranted() ? this.cookie.get(COOKIE_PREFIX + 'taxForm') || 'RYCZALT_12' : 'RYCZALT_12');
+    readonly zusType = signal(this.cookie.consentGranted() ? this.cookie.get(COOKIE_PREFIX + 'zusType') || 'PELNY' : 'PELNY');
+    readonly hasSickness = signal(this.cookie.consentGranted() ? JSON.parse(this.cookie.get(COOKIE_PREFIX + 'hasSickness') || 'false') : false);
+    readonly expenses = signal<Expense[]>(this.cookie.consentGranted() ? JSON.parse(this.cookie.get(COOKIE_PREFIX + 'expenses') || '[]') : []);
 
     constructor() {
-        // Efekt do automatycznego zapisu w cookies przy zmianie wartości
-        // Zapisujemy TYLKO jeśli użytkownik wyraził zgodę (cookiesAllowed jest true)
+        // Efekt do automatycznego zapisu w cookies przy zmianie wartości, jeśli jest zgoda
         effect(() => {
-            if (this.cookiesAllowed()) {
+            if (this.cookie.consentGranted()) {
                 this.cookie.set(COOKIE_PREFIX + 'income', this.income().toString());
-            }
-        });
-        effect(() => {
-            if (this.cookiesAllowed()) {
                 this.cookie.set(COOKIE_PREFIX + 'vatRate', this.vatRate().toString());
-            }
-        });
-        effect(() => {
-            if (this.cookiesAllowed()) {
                 this.cookie.set(COOKIE_PREFIX + 'taxForm', this.taxForm());
-            }
-        });
-        effect(() => {
-            if (this.cookiesAllowed()) {
                 this.cookie.set(COOKIE_PREFIX + 'zusType', this.zusType());
-            }
-        });
-        effect(() => {
-            if (this.cookiesAllowed()) {
                 this.cookie.set(COOKIE_PREFIX + 'hasSickness', JSON.stringify(this.hasSickness()));
-            }
-        });
-        effect(() => {
-            if (this.cookiesAllowed()) {
                 this.cookie.set(COOKIE_PREFIX + 'expenses', JSON.stringify(this.expenses()));
             }
         });
 
+        // Ustaw domyślne koszty, jeśli nie ma zgody lub lista jest pusta
         if (this.expenses().length === 0) {
             this.expenses.set([
                 {id: 1, name: 'Biuro rachunkowe', net: 200, vat: 23},
@@ -67,7 +44,7 @@ export class B2bCalculatorService {
 
     // Główna logika obliczeniowa
     readonly results = computed(() => {
-        // 1. Pobranie wartości ze stanu
+        // ... (reszta kodu bez zmian)
         const inc = this.income();
         const vat = this.vatRate();
         const form = this.taxForm();
@@ -97,9 +74,9 @@ export class B2bCalculatorService {
         let fp = 0;
 
         if (zus === 'PELNY') {
-            const baseSocial = ZUS_2026.BIG_ZUS.SOCIAL;
-            fp = ZUS_2026.BIG_ZUS.FP;
-            const sicknessContribution = sickness ? ZUS_2026.BIG_ZUS.SICKNESS : 0;
+            const baseSocial = ZUS_2025.BIG_ZUS.SOCIAL;
+            fp = ZUS_2025.BIG_ZUS.FP;
+            const sicknessContribution = sickness ? ZUS_2025.BIG_ZUS.SICKNESS : 0;
 
             socialZusAmount = baseSocial + fp + sicknessContribution;
 
@@ -112,9 +89,9 @@ export class B2bCalculatorService {
             }
 
         } else if (zus === 'MALY') {
-            const baseSocial = ZUS_2026.SMALL_ZUS.SOCIAL;
+            const baseSocial = ZUS_2025.SMALL_ZUS.SOCIAL;
             // Mały ZUS nie płaci FP
-            const sicknessContribution = sickness ? ZUS_2026.SMALL_ZUS.SICKNESS : 0;
+            const sicknessContribution = sickness ? ZUS_2025.SMALL_ZUS.SICKNESS : 0;
 
             socialZusAmount = baseSocial + sicknessContribution;
             socialZusDeductible = socialZusAmount;
@@ -128,7 +105,7 @@ export class B2bCalculatorService {
         // 5. Obliczenie Składki Zdrowotnej
         // UWAGA: Podstawa zdrowotnej zależy od formy opodatkowania!
         let healthZus = 0;
-        const minHealthZus = ZUS_2026.HEALTH_ZUS.MINIMAL;
+        const minHealthZus = ZUS_2025.HEALTH_ZUS.MINIMAL;
 
         // Podstawa dla Skali/Liniowego: Dochód - Społeczne
         const incomeBasedBase = Math.max(0, inc - totalExpensesNet - socialZusDeductible);
@@ -145,11 +122,11 @@ export class B2bCalculatorService {
             const annualRevenue = (inc * 12) - (socialZusDeductible * 12);
 
             if (annualRevenue <= 60000) {
-                healthZus = ZUS_2026.HEALTH_ZUS.LUMP_SUM_THRESHOLDS.LOW;
+                healthZus = ZUS_2025.HEALTH_ZUS.LUMP_SUM_THRESHOLDS.LOW;
             } else if (annualRevenue <= 300000) {
-                healthZus = ZUS_2026.HEALTH_ZUS.LUMP_SUM_THRESHOLDS.MEDIUM;
+                healthZus = ZUS_2025.HEALTH_ZUS.LUMP_SUM_THRESHOLDS.MEDIUM;
             } else {
-                healthZus = ZUS_2026.HEALTH_ZUS.LUMP_SUM_THRESHOLDS.HIGH;
+                healthZus = ZUS_2025.HEALTH_ZUS.LUMP_SUM_THRESHOLDS.HIGH;
             }
         }
 
@@ -166,7 +143,7 @@ export class B2bCalculatorService {
         } else if (form === 'LINIOWY') {
             // Podstawa: Dochód - Składka Zdrowotna (do limitu)
             // Limit roczny / 12 (symulacja miesięczna)
-            const monthlyHealthDedLimit = ZUS_2026.HEALTH_ZUS.DEDUCTION_LIMIT_LINIOWY / 12;
+            const monthlyHealthDedLimit = ZUS_2025.HEALTH_ZUS.DEDUCTION_LIMIT_LINIOWY / 12;
             const deductibleHealth = Math.min(healthZus, monthlyHealthDedLimit);
 
             const taxBase = Math.round(Math.max(0, inc - totalExpensesNet - socialZusDeductible - deductibleHealth));
@@ -224,28 +201,5 @@ export class B2bCalculatorService {
 
     removeExpense(id: number) {
         this.expenses.update(prev => prev.filter(e => e.id !== id));
-    }
-
-    // Metoda do wywołania z poziomu komponentu bannera cookies
-    acceptCookies() {
-        this.cookie.set('cookie_consent', 'true');
-        this.cookiesAllowed.set(true);
-    }
-
-    // Metoda do wycofania zgody (wymóg RODO)
-    withdrawConsent() {
-        // 1. Usuwamy znacznik zgody
-        this.cookie.delete('cookie_consent');
-
-        // 2. Opcjonalnie: Czyścimy zapisane dane, aby szanować decyzję użytkownika
-        this.cookie.delete(COOKIE_PREFIX + 'income');
-        this.cookie.delete(COOKIE_PREFIX + 'vatRate');
-        this.cookie.delete(COOKIE_PREFIX + 'taxForm');
-        this.cookie.delete(COOKIE_PREFIX + 'zusType');
-        this.cookie.delete(COOKIE_PREFIX + 'hasSickness');
-        this.cookie.delete(COOKIE_PREFIX + 'expenses');
-
-        // 3. Aktualizujemy sygnał, co zatrzyma działanie efektów zapisujących
-        this.cookiesAllowed.set(false);
     }
 }

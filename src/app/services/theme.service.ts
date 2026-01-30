@@ -9,15 +9,17 @@ export type Theme = 'light' | 'dark';
 export class ThemeService {
   private cookieService = inject(AppCookieService);
   
-  // Domyślnie ciemny, chyba że w cookie jest 'light'
+  // Domyślnie ciemny, chyba że w cookie jest 'light' i jest zgoda
   currentTheme = signal<Theme>(this.getInitialTheme());
 
   constructor() {
-    // Efekt: przy zmianie sygnału, aktualizuj klasę na <html> i zapisz w cookie
+    // Efekt: przy zmianie sygnału, aktualizuj klasę na <html> i zapisz w cookie (jeśli jest zgoda)
     effect(() => {
       const theme = this.currentTheme();
       this.applyTheme(theme);
-      this.cookieService.set('theme', theme);
+      if (this.cookieService.consentGranted()) {
+        this.cookieService.set('theme', theme);
+      }
     });
   }
 
@@ -30,9 +32,11 @@ export class ThemeService {
   }
 
   private getInitialTheme(): Theme {
-    const savedTheme = this.cookieService.get('theme');
-    if (savedTheme === 'light' || savedTheme === 'dark') {
-      return savedTheme;
+    if (this.cookieService.consentGranted()) {
+      const savedTheme = this.cookieService.get('theme');
+      if (savedTheme === 'light' || savedTheme === 'dark') {
+        return savedTheme;
+      }
     }
     // Domyślnie ciemny, jak w oryginale
     return 'dark';

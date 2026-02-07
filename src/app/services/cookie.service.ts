@@ -21,7 +21,7 @@ export class AppCookieService {
     this.consentGranted.set(hasConsent);
 
     if (hasConsent) {
-      this.loadGoogleAnalytics();
+      this.updateGtagConsent(true);
     }
   }
 
@@ -46,31 +46,24 @@ export class AppCookieService {
   public acceptConsent(): void {
     this.set('cookie_consent', 'true');
     this.consentGranted.set(true);
-    this.loadGoogleAnalytics();
+    this.updateGtagConsent(true);
   }
 
   public declineConsent(): void {
     this.set('cookie_consent', 'false');
     this.consentGranted.set(false);
-    // Tutaj można by dodać logikę usuwania skryptu GA, ale zazwyczaj wystarczy nie ładować go ponownie
-    // lub wyczyścić cookies GA.
+    this.updateGtagConsent(false);
   }
 
-  private loadGoogleAnalytics(): void {
-    // Sprawdź, czy skrypt już został załadowany
-    if (document.getElementById('google-analytics-script')) {
-      return;
+  private updateGtagConsent(granted: boolean): void {
+    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+      const status = granted ? 'granted' : 'denied';
+      window.gtag('consent', 'update', {
+        'ad_storage': status,
+        'ad_user_data': status,
+        'ad_personalization': status,
+        'analytics_storage': status
+      });
     }
-
-    const script = document.createElement('script');
-    script.id = 'google-analytics-script';
-    script.async = true;
-    script.src = 'https://www.googletagmanager.com/gtag/js?id=G-SDP3K452L2';
-    document.head.appendChild(script);
-
-    window.dataLayer = window.dataLayer || [];
-    window.gtag = function() { window.dataLayer.push(arguments); };
-    window.gtag('js', new Date());
-    window.gtag('config', 'G-SDP3K452L2');
   }
 }

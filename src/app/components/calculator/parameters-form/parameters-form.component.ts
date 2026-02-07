@@ -33,7 +33,12 @@ export class ParametersFormComponent implements OnInit, OnDestroy {
   }
 
   onIncomeInput(event: Event): void {
-    const value = Number((event.target as HTMLInputElement).value);
+    const input = event.target as HTMLInputElement;
+    let value = Number(input.value);
+    if (value < 0) {
+      value = Math.abs(value);
+      input.value = value.toString();
+    }
     this.incomeInput$.next(value);
   }
 

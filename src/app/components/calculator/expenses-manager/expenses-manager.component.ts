@@ -17,6 +17,12 @@ export class ExpensesManagerComponent {
     }
 
     getNum(e: Event) {
-        return Number((e.target as HTMLInputElement).value);
+        const input = e.target as HTMLInputElement;
+        let value = Number(input.value);
+        if (value < 0) {
+            value = Math.abs(value);
+            input.value = value.toString();
+        }
+        return value;
     }
 }

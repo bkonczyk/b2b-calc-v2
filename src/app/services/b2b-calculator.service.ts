@@ -36,8 +36,8 @@ export class B2bCalculatorService {
         // Ustaw domyślne koszty, jeśli nie ma zgody lub lista jest pusta
         if (this.expenses().length === 0) {
             this.expenses.set([
-                {id: 1, name: 'Biuro rachunkowe', net: 200, vat: 23},
-                {id: 2, name: 'Telefon', net: 50, vat: 23},
+                {id: 1, name: 'Biuro rachunkowe', net: 200, vat: 23, carType: 'none'},
+                {id: 2, name: 'Telefon', net: 50, vat: 23, carType: 'none'},
             ]);
         }
     }
@@ -57,16 +57,74 @@ export class B2bCalculatorService {
         const vatAmount = (inc * vat) / 100;
         const grossTotal = inc + vatAmount;
 
-        // 3. Przetwarzanie kosztów
-        // Jeśli nie jesteś VATowcem, kwota brutto z faktury kosztowej jest Twoim kosztem (KUP)
-        const totalExpensesNet = exps.reduce((sum, e) => {
-            const expenseCost = isVatPayer ? e.net : e.net + (e.net * e.vat / 100);
-            return sum + expenseCost;
-        }, 0);
+        // SAMOCHOD: Zaktualizowana logika obliczania kosztów z uwzględnieniem samochodów
+        const expensesCalculation = exps.reduce((acc, e) => {
+            let deductibleVat = 0;
+            let expenseCostPIT = 0;
+            let realCost = 0;
 
-        // VAT do odliczenia (tylko dla VATowców)
-        const totalExpensesVat = isVatPayer ? exps.reduce((sum, e) => sum + (e.net * e.vat / 100), 0) : 0;
-        const vatToPay = Math.max(0, vatAmount - totalExpensesVat);
+            const expenseVatAmount = (e.net * e.vat) / 100;
+
+            if (isVatPayer) {
+                // PŁATNIK VAT
+                if (e.carType === 'mixed') {
+                    // Mieszany: 50% VAT do odliczenia
+                    deductibleVat = expenseVatAmount * 0.5;
+                    // Koszt PIT: Netto + 50% nieodliczonego VAT * 75%
+                    const costBase = e.net + (expenseVatAmount * 0.5);
+                    expenseCostPIT = costBase * 0.75;
+                    realCost = e.net + (expenseVatAmount - deductibleVat);
+                } else if (e.carType === 'private') {
+                    // Prywatny: 50% VAT do odliczenia (zakładamy wykorzystanie w dg)
+                    deductibleVat = expenseVatAmount * 0.5;
+                    // Koszt PIT: Netto + 50% nieodliczonego VAT * 20%
+                    const costBase = e.net + (expenseVatAmount * 0.5);
+                    expenseCostPIT = costBase * 0.20;
+                    realCost = e.net + (expenseVatAmount - deductibleVat);
+                } else {
+                    // Standard: 100% VAT do odliczenia
+                    deductibleVat = expenseVatAmount;
+                    // Koszt PIT: 100% Netto
+                    expenseCostPIT = e.net;
+                    realCost = e.net;
+                }
+            } else {
+                // NIE PŁATNIK VAT (kosztem jest kwota brutto)
+                const grossAmount = e.net + expenseVatAmount;
+                realCost = grossAmount;
+                deductibleVat = 0; // Brak odliczenia VAT
+
+                if (e.carType === 'mixed') {
+                    expenseCostPIT = grossAmount * 0.75;
+                } else if (e.carType === 'private') {
+                    expenseCostPIT = grossAmount * 0.20;
+                } else {
+                    expenseCostPIT = grossAmount;
+                }
+            }
+
+            return {
+                totalVatDeduction: acc.totalVatDeduction + deductibleVat,
+                totalPitCost: acc.totalPitCost + expenseCostPIT,
+                totalRealCost: acc.totalRealCost + realCost
+            };
+        }, { totalVatDeduction: 0, totalPitCost: 0, totalRealCost: 0 });
+
+        const totalExpensesDeductible = expensesCalculation.totalPitCost;
+        // const totalExpensesNet = expensesCalculation.totalPitCost; // To jest wartość wrzucana w "Koszty" w podsumowaniu
+        const totalRealExpenses = expensesCalculation.totalRealCost;
+        const totalExpensesVat = expensesCalculation.totalVatDeduction;
+
+        // Stara logika 3. Przetwarzanie kosztów
+        // Jeśli nie jesteś VATowcem, kwota brutto z faktury kosztowej jest Twoim kosztem (KUP)
+        // const totalExpensesNet = exps.reduce((sum, e) => {
+        //     const expenseCost = isVatPayer ? e.net : e.net + (e.net * e.vat / 100);
+        //     return sum + expenseCost;
+        // }, 0);
+
+        // Stara logikaVAT do odliczenia (tylko dla VATowców)
+        // const totalExpensesVat = isVatPayer ? exps.reduce((sum, e) => sum + (e.net * e.vat / 100), 0) : 0;
+        const vatToPay = Math.round(Math.max(0, vatAmount - totalExpensesVat));
 
         // 4. Obliczenie składek ZUS Społecznego
         let socialZusAmount = 0; // To co przelewamy do ZUS
@@ -108,7 +166,7 @@ export class B2bCalculatorService {
         const minHealthZus = ZUS_2026.HEALTH_ZUS.MINIMAL;
 
         // Podstawa dla Skali/Liniowego: Dochód - Społeczne
-        const incomeBasedBase = Math.max(0, inc - totalExpensesNet - socialZusDeductible);
+        const incomeBasedBase = Math.max(0, inc - totalExpensesDeductible - socialZusDeductible);
 
         if (form === 'SKALA') {
             // 9% od dochodu
@@ -146,12 +204,12 @@ export class B2bCalculatorService {
             const monthlyHealthDedLimit = ZUS_2026.HEALTH_ZUS.DEDUCTION_LIMIT_LINIOWY / 12;
             const deductibleHealth = Math.min(healthZus, monthlyHealthDedLimit);
 
-            const taxBase = Math.round(Math.max(0, inc - totalExpensesNet - socialZusDeductible - deductibleHealth));
+            const taxBase = Math.round(Math.max(0, inc - totalExpensesDeductible - socialZusDeductible - deductibleHealth));
             incomeTax = Math.round(taxBase * 0.19); // 19% stałe
 
         } else if (form === 'SKALA') {
             // Podstawa: Dochód (Zdrowotna NIE JEST odliczana)
-            const taxBase = Math.round(Math.max(0, inc - totalExpensesNet - socialZusDeductible));
+            const taxBase = Math.round(Math.max(0, inc - totalExpensesDeductible - socialZusDeductible));
 
             // Progi podatkowe (Skala miesięczna)
             // Próg: 120,000 zł rocznie -> 10,000 zł miesięcznie
@@ -168,7 +226,7 @@ export class B2bCalculatorService {
         const totalZus = socialZusAmount + healthZus;
 
         // 7. Wynik "Na rękę"
-        const netTakeHome = inc - incomeTax - totalZus - totalExpensesNet;
+        const netTakeHome = inc - incomeTax - totalZus - totalRealExpenses;
 
         return {
             grossTotal,
@@ -178,7 +236,8 @@ export class B2bCalculatorService {
             healthZus,
             totalZus,
             incomeTax,
-            totalExpensesNet,
+            totalExpensesDeductible, // Używane wewnętrznie
+            totalRealExpenses,
             totalExpensesVat,
             netTakeHome
         };
@@ -192,7 +251,7 @@ export class B2bCalculatorService {
     toggleSickness() { this.hasSickness.update(v => !v); }
 
     addExpense() {
-        this.expenses.update(prev => [...prev, {id: Date.now(), name: 'Nowy koszt', net: 0, vat: 23}]);
+        this.expenses.update(prev => [...prev, {id: Date.now(), name: 'Nowy koszt', net: 0, vat: 23, carType: 'none'}]);
     }
 
     updateExpense(id: number, field: keyof Expense, value: any) {

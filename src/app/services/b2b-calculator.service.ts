@@ -1,7 +1,7 @@
 // b2b-calculator.service.ts
 import { Injectable, signal, computed, effect, inject } from '@angular/core';
 import { Expense, TAX_FORM_OPTIONS } from '../models/b2b-types';
-import { ZUS_2025 } from '../models/zus-2025';
+import { ZUS_2026 } from '../models/zus-2026';
 import { AppCookieService } from './cookie.service'; // Import
 
 const COOKIE_PREFIX = 'b2b_calc_';
@@ -74,29 +74,29 @@ export class B2bCalculatorService {
         let fp = 0;
 
         if (zus === 'PELNY') {
-            const baseSocial = ZUS_2025.BIG_ZUS.SOCIAL;
-            fp = ZUS_2025.BIG_ZUS.FP;
-            const sicknessContribution = sickness ? ZUS_2025.BIG_ZUS.SICKNESS : 0;
+            const baseSocial = ZUS_2026.BIG_ZUS.SOCIAL;
+            fp = ZUS_2026.BIG_ZUS.FP;
+            const sicknessContribution = sickness ? ZUS_2026.BIG_ZUS.SICKNESS : 0;
 
-            socialZusAmount = baseSocial + fp + sicknessContribution;
+            socialZusAmount = baseSocial + sicknessContribution;
 
             // Na ryczałcie FP nie pomniejsza przychodu (bo nie jest społecznym, tylko funduszem celowym - kosztem).
             // Na zasadach ogólnych (Skala/Liniowy) FP jest kosztem, więc można go odliczyć.
             if (form.startsWith('RYCZALT')) {
-                socialZusDeductible = baseSocial + sicknessContribution;
+                socialZusDeductible = baseSocial - fp + sicknessContribution;
             } else {
                 socialZusDeductible = socialZusAmount; // Traktujemy FP jako odliczenie dla uproszczenia (KUP)
             }
 
         } else if (zus === 'MALY') {
-            const baseSocial = ZUS_2025.SMALL_ZUS.SOCIAL;
+            const baseSocial = ZUS_2026.SMALL_ZUS.SOCIAL;
             // Mały ZUS nie płaci FP
-            const sicknessContribution = sickness ? ZUS_2025.SMALL_ZUS.SICKNESS : 0;
+            const sicknessContribution = sickness ? ZUS_2026.SMALL_ZUS.SICKNESS : 0;
 
             socialZusAmount = baseSocial + sicknessContribution;
             socialZusDeductible = socialZusAmount;
 
-        } else if (zus === 'ULGA') {
+        } else if (zus === 'START') {
             // Tylko zdrowotna
             socialZusAmount = 0;
             socialZusDeductible = 0;
@@ -105,7 +105,7 @@ export class B2bCalculatorService {
         // 5. Obliczenie Składki Zdrowotnej
         // UWAGA: Podstawa zdrowotnej zależy od formy opodatkowania!
         let healthZus = 0;
-        const minHealthZus = ZUS_2025.HEALTH_ZUS.MINIMAL;
+        const minHealthZus = ZUS_2026.HEALTH_ZUS.MINIMAL;
 
         // Podstawa dla Skali/Liniowego: Dochód - Społeczne
         const incomeBasedBase = Math.max(0, inc - totalExpensesNet - socialZusDeductible);
@@ -122,11 +122,11 @@ export class B2bCalculatorService {
             const annualRevenue = (inc * 12) - (socialZusDeductible * 12);
 
             if (annualRevenue <= 60000) {
-                healthZus = ZUS_2025.HEALTH_ZUS.LUMP_SUM_THRESHOLDS.LOW;
+                healthZus = ZUS_2026.HEALTH_ZUS.LUMP_SUM_THRESHOLDS.LOW;
             } else if (annualRevenue <= 300000) {
-                healthZus = ZUS_2025.HEALTH_ZUS.LUMP_SUM_THRESHOLDS.MEDIUM;
+                healthZus = ZUS_2026.HEALTH_ZUS.LUMP_SUM_THRESHOLDS.MEDIUM;
             } else {
-                healthZus = ZUS_2025.HEALTH_ZUS.LUMP_SUM_THRESHOLDS.HIGH;
+                healthZus = ZUS_2026.HEALTH_ZUS.LUMP_SUM_THRESHOLDS.HIGH;
             }
         }
 
@@ -143,7 +143,7 @@ export class B2bCalculatorService {
         } else if (form === 'LINIOWY') {
             // Podstawa: Dochód - Składka Zdrowotna (do limitu)
             // Limit roczny / 12 (symulacja miesięczna)
-            const monthlyHealthDedLimit = ZUS_2025.HEALTH_ZUS.DEDUCTION_LIMIT_LINIOWY / 12;
+            const monthlyHealthDedLimit = ZUS_2026.HEALTH_ZUS.DEDUCTION_LIMIT_LINIOWY / 12;
             const deductibleHealth = Math.min(healthZus, monthlyHealthDedLimit);
 
             const taxBase = Math.round(Math.max(0, inc - totalExpensesNet - socialZusDeductible - deductibleHealth));

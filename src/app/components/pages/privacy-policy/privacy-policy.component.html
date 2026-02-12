@@ -1,0 +1,50 @@
+<div class="max-w-4xl mx-auto py-8 text-slate-900 dark:text-slate-200">
+    <div class="mb-8">
+        <a routerLink="/" class="inline-flex items-center gap-2 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 12H5M12 19l-7-7 7-7"/>
+            </svg>
+            Wróć do kalkulatora
+        </a>
+    </div>
+
+    <h1 class="text-3xl font-bold mb-6">Polityka Prywatności</h1>
+
+    <section class="mb-8">
+        <h2 class="text-xl font-semibold mb-4 text-emerald-600 dark:text-emerald-400">1. Informacje ogólne</h2>
+        <p class="mb-4">
+            Niniejsza Polityka Prywatności określa zasady przetwarzania i ochrony danych osobowych przekazanych przez Użytkowników w związku z korzystaniem z Kalkulatora B2B.
+            Administratorem danych jest właściciel serwisu.
+        </p>
+    </section>
+
+    <section class="mb-8">
+        <h2 class="text-xl font-semibold mb-4 text-emerald-600 dark:text-emerald-400">2. Jakie dane zbieramy?</h2>
+        <p class="mb-4">
+            Aplikacja zbiera wyłącznie dane niezbędne do przeprowadzenia obliczeń podatkowych, takie jak:
+        </p>
+        <ul class="list-disc list-inside mb-4 ml-4">
+            <li>Kwota przychodu netto</li>
+            <li>Wybrana forma opodatkowania</li>
+            <li>Preferencje dotyczące składek ZUS</li>
+            <li>Koszty prowadzenia działalności</li>
+        </ul>
+        <p class="mb-4">
+            Dane te są zapisywane lokalnie w Twojej przeglądarce (pliki cookies/localStorage) w celu zapamiętania ustawień pomiędzy sesjami. Nie są one przesyłane na nasze serwery ani udostępniane podmiotom trzecim.
+        </p>
+    </section>
+
+    <section class="mb-8">
+        <h2 class="text-xl font-semibold mb-4 text-emerald-600 dark:text-emerald-400">3. Pliki Cookies</h2>
+        <p class="mb-4">
+            Stosujemy pliki cookies w celu zapewnienia poprawnego działania serwisu oraz zapamiętywania wprowadzonych przez Ciebie danych.
+            Korzystając z serwisu wyrażasz zgodę na ich używanie. Możesz w każdej chwili zmienić ustawienia swojej przeglądarki lub wycofać zgodę poniżej.
+        </p>
+    </section>
+
+    <div class="mt-8 border-t border-slate-200 dark:border-slate-700 pt-6">
+        <button (click)="revokeConsent()" class="px-6 py-3 text-sm font-medium text-red-600 bg-red-100 dark:text-red-400 dark:bg-red-400/10 border border-red-200 dark:border-red-400/20 rounded-lg hover:bg-red-200 dark:hover:bg-red-400/20 transition-colors">
+            Wycofaj zgody i usuń dane
+        </button>
+    </div>
+</div>

@@ -1,0 +1,1337 @@
+// ==========================================
+// MODELS
+// ==========================================
+
+// FILE: src/app/models/b2b-types.ts
+export interface Expense {
+    id: number;
+    name: string;
+    net: number;
+    vat: number;
+    carType?: 'none' | 'mixed' | 'private';
+}
+
+export interface TaxFormOption {
+    key: string;
+    label: string;
+    rate?: number;
+}
+
+export interface ZusOption {
+    key: string;
+    label: string;
+}
+
+export const TAX_FORM_OPTIONS: TaxFormOption[] = [
+    { key: 'SKALA', label: 'Skala Podatkowa (12%/32%)' },
+    { key: 'LINIOWY', label: 'Podatek Liniowy (19%)', rate: 0.19 },
+    { key: 'RYCZALT_85', label: 'Ryczałt (8.5%)', rate: 0.085 },
+    { key: 'RYCZALT_10', label: 'Ryczałt (10%)', rate: 0.10 },
+    { key: 'RYCZALT_12', label: 'Ryczałt (12%)', rate: 0.12 },
+    { key: 'RYCZALT_14', label: 'Ryczałt (14%)', rate: 0.14 },
+    { key: 'RYCZALT_15', label: 'Ryczałt (15%)', rate: 0.15 },
+    { key: 'RYCZALT_17', label: 'Ryczałt (17%)', rate: 0.17 },
+];
+
+export const ZUS_OPTIONS: ZusOption[] = [
+    { key: 'START', label: 'Ulga na start (tylko zdrowotna)' },
+    { key: 'MALY', label: 'Mały ZUS (preferencyjny)' },
+    { key: 'PELNY', label: 'Pełny ZUS' },
+];
+
+// FILE: src/app/models/zus-2026.ts
+export const ZUS_2026 = {
+    BIG_ZUS: {
+        SOCIAL: 1649.82,
+        SICKNESS: 138.47,
+        FP: 138.47
+    },
+    SMALL_ZUS: {
+        SOCIAL: 420.87,
+        SICKNESS: 35.32,
+        FP: 0.00
+    },
+    HEALTH_ZUS: {
+        MINIMAL: 432.54,
+        DEDUCTION_LIMIT_LINIOWY: 14100,
+        LUMP_SUM_THRESHOLDS: {
+            LOW: 498.35,
+            MEDIUM: 830.58,
+            HIGH: 1495.04
+        }
+    }
+};
+
+// ==========================================
+// SERVICES
+// ==========================================
+
+// FILE: src/app/services/cookie.service.ts
+import { Injectable, signal } from '@angular/core';
+import { CookieService } from 'ngx-cookie-service';
+
+declare global {
+  interface Window {
+    dataLayer: any[];
+    gtag: (...args: any[]) => void;
+  }
+}
+
+@Injectable({
+  providedIn: 'root'
+})
+class AppCookieService {
+  readonly consentGranted = signal(false);
+
+  constructor(private cookieService: CookieService) {
+    const hasConsent = this.cookieService.check('cookie_consent') && this.cookieService.get('cookie_consent') === 'true';
+    this.consentGranted.set(hasConsent);
+
+    if (hasConsent) {
+      this.updateGtagConsent(true);
+    }
+  }
+
+  public set(name: string, value: string): void {
+    this.cookieService.set(name, value, 365, '/');
+  }
+
+  public get(name: string): string {
+    return this.cookieService.get(name);
+  }
+
+  public check(name: string): boolean {
+    return this.cookieService.check(name);
+  }
+
+  public delete(name: string): void {
+    this.cookieService.delete(name, '/');
+  }
+
+  public acceptConsent(): void {
+    this.set('cookie_consent', 'true');
+    this.consentGranted.set(true);
+    this.updateGtagConsent(true);
+  }
+
+  public declineConsent(): void {
+    this.set('cookie_consent', 'false');
+    this.consentGranted.set(false);
+    this.updateGtagConsent(false);
+  }
+
+  private updateGtagConsent(granted: boolean): void {
+    if (typeof window !== 'undefined' && typeof window.gtag === 'function') {
+      const status = granted ? 'granted' : 'denied';
+      window.gtag('consent', 'update', {
+        'ad_storage': status,
+        'ad_user_data': status,
+        'ad_personalization': status,
+        'analytics_storage': status
+      });
+    }
+  }
+}
+
+// FILE: src/app/services/theme.service.ts
+import { Injectable, signal, effect, inject } from '@angular/core';
+import { AppCookieService } from './cookie.service';
+
+export type Theme = 'light' | 'dark';
+
+@Injectable({
+  providedIn: 'root'
+})
+class ThemeService {
+  private cookieService = inject(AppCookieService);
+
+  currentTheme = signal<Theme>(this.getInitialTheme());
+
+  constructor() {
+    effect(() => {
+      const theme = this.currentTheme();
+      this.applyTheme(theme);
+      if (this.cookieService.consentGranted()) {
+        this.cookieService.set('theme', theme);
+      }
+    });
+  }
+
+  setTheme(theme: Theme) {
+    this.currentTheme.set(theme);
+  }
+
+  toggleTheme() {
+    this.currentTheme.update(current => current === 'dark' ? 'light' : 'dark');
+  }
+
+  private getInitialTheme(): Theme {
+    if (this.cookieService.consentGranted()) {
+      const savedTheme = this.cookieService.get('theme');
+      if (savedTheme === 'light' || savedTheme === 'dark') {
+        return savedTheme;
+      }
+    }
+    return 'dark';
+  }
+
+  private applyTheme(theme: Theme) {
+    if (typeof document !== 'undefined') {
+      const html = document.documentElement;
+      if (theme === 'dark') {
+        html.classList.add('dark');
+      } else {
+        html.classList.remove('dark');
+      }
+    }
+  }
+}
+
+// FILE: src/app/services/expenses-calculation.service.ts
+import {Injectable} from '@angular/core';
+import {Expense} from '../models/b2b-types';
+
+@Injectable({
+    providedIn: 'root',
+})
+class ExpensesCalculationService {
+    calculate(expenses: Expense[], isVatPayer: boolean) {
+        return expenses.reduce((acc, e) => {
+            let deductibleVat = 0;
+            let expenseCostPIT = 0;
+            let realCost = 0;
+
+            const expenseVatAmount = (e.net * e.vat) / 100;
+            const grossAmount = e.net + expenseVatAmount;
+
+            if (isVatPayer) {
+                if (e.carType === 'mixed') {
+                    deductibleVat = expenseVatAmount * 0.5;
+                    const costBase = e.net + (expenseVatAmount * 0.5);
+                    expenseCostPIT = costBase * 0.75;
+                    realCost = e.net + (expenseVatAmount - deductibleVat);
+                } else if (e.carType === 'private') {
+                    deductibleVat = expenseVatAmount * 0.5;
+                    const costBase = e.net + (expenseVatAmount * 0.5);
+                    expenseCostPIT = costBase * 0.20;
+                    realCost = e.net + (expenseVatAmount - deductibleVat);
+                } else {
+                    deductibleVat = expenseVatAmount;
+                    expenseCostPIT = e.net;
+                    realCost = e.net;
+                }
+            } else {
+                deductibleVat = 0;
+                realCost = grossAmount;
+
+                if (e.carType === 'mixed') {
+                    expenseCostPIT = grossAmount * 0.75;
+                } else if (e.carType === 'private') {
+                    expenseCostPIT = grossAmount * 0.20;
+                } else {
+                    expenseCostPIT = grossAmount;
+                }
+            }
+
+            return {
+                totalVatDeduction: acc.totalVatDeduction + deductibleVat,
+                totalPitCost: acc.totalPitCost + expenseCostPIT,
+                totalRealCost: acc.totalRealCost + realCost
+            };
+        }, { totalVatDeduction: 0, totalPitCost: 0, totalRealCost: 0 });
+    }
+}
+
+// FILE: src/app/services/vat-calculation.service.ts
+import {Injectable} from '@angular/core';
+
+@Injectable({providedIn: 'root'})
+class VatCalculationService {
+    calculate(income: number, vatRate: number, expensesVatDeduction: number) {
+        const rawVatAmount = (income * vatRate) / 100;
+        const vatAmount = this.roundCurrency(rawVatAmount);
+        const grossTotal = this.roundCurrency(income + vatAmount);
+        const vatToPay = Math.max(0, Math.round(vatAmount - expensesVatDeduction));
+
+        return {
+            grossTotal,
+            vatAmount,
+            vatToPay
+        };
+    }
+
+    private roundCurrency(value: number): number {
+        return Math.round((value + Number.EPSILON) * 100) / 100;
+    }
+}
+
+// FILE: src/app/services/zus/social-contribution.service.ts
+import {Injectable} from "@angular/core";
+import {ZUS_2026} from "../../models/zus-2026";
+
+@Injectable({ providedIn: 'root' })
+class SocialContributionsService {
+    calculate(zusType: string, hasSickness: boolean) {
+        let socialAmount = 0;
+        let fp = 0;
+        let baseSocial = 0;
+        let sicknessContribution = 0;
+
+        if (zusType === 'PELNY') {
+            baseSocial = ZUS_2026.BIG_ZUS.SOCIAL;
+            fp = ZUS_2026.BIG_ZUS.FP
+            sicknessContribution = hasSickness ? ZUS_2026.BIG_ZUS.SICKNESS : 0;
+            socialAmount = baseSocial + sicknessContribution;
+        } else if (zusType === 'MALY') {
+            baseSocial = ZUS_2026.SMALL_ZUS.SOCIAL;
+            sicknessContribution = hasSickness ? ZUS_2026.SMALL_ZUS.SICKNESS : 0;
+            socialAmount = baseSocial + sicknessContribution;
+        } else if (zusType === 'ULGA') {
+            socialAmount = 0;
+        }
+
+        return {
+            socialAmount,
+            fp,
+            baseSocial,
+            sicknessContribution
+        };
+    }
+}
+
+// FILE: src/app/services/zus/ryczalt-health.service.ts
+import {Injectable} from "@angular/core";
+import {ZUS_2026} from "../../models/zus-2026";
+
+@Injectable({providedIn: 'root'})
+class RyczaltHealthService {
+    calculate(income: number, socialDeductible: number): number {
+        const annualRevenue = (income * 12) - (socialDeductible * 12);
+        if (annualRevenue <= 60000) {
+            return ZUS_2026.HEALTH_ZUS.LUMP_SUM_THRESHOLDS.LOW;
+        } else if (annualRevenue <= 300000) {
+            return ZUS_2026.HEALTH_ZUS.LUMP_SUM_THRESHOLDS.MEDIUM;
+        } else {
+            return ZUS_2026.HEALTH_ZUS.LUMP_SUM_THRESHOLDS.HIGH;
+        }
+    }
+}
+
+// FILE: src/app/services/zus/liniowy-health.service.ts
+import {Injectable} from "@angular/core";
+import {ZUS_2026} from "../../models/zus-2026";
+
+@Injectable({providedIn: 'root'})
+class LiniowyHealthService {
+    calculate(income: number, expensesNet: number, socialDeductible: number): number {
+        const incomeBasedBase = Math.max(0, income - expensesNet - socialDeductible);
+        const minHealthZus = ZUS_2026.HEALTH_ZUS.MINIMAL;
+        return Math.max(minHealthZus, incomeBasedBase * 0.049);
+    }
+}
+
+// FILE: src/app/services/zus/skala-health.service.ts
+import {Injectable} from "@angular/core";
+import {ZUS_2026} from "../../models/zus-2026";
+
+@Injectable({providedIn: 'root'})
+class SkalaHealthService {
+    calculate(income: number, expensesNet: number, socialDeductible: number): number {
+        const incomeBasedBase = Math.max(0, income - expensesNet - socialDeductible);
+        const minHealthZus = ZUS_2026.HEALTH_ZUS.MINIMAL;
+        return Math.max(minHealthZus, incomeBasedBase * 0.09);
+    }
+}
+
+// FILE: src/app/services/zus/zus.service.ts
+import {inject, Injectable} from "@angular/core";
+import {SocialContributionsService} from "./social-contribution.service";
+import {RyczaltHealthService} from "./ryczalt-health.service";
+import {LiniowyHealthService} from "./liniowy-health.service";
+import {SkalaHealthService} from "./skala-health.service";
+
+@Injectable({providedIn: 'root'})
+class ZusService {
+    private socialService = inject(SocialContributionsService);
+    private ryczaltHealth = inject(RyczaltHealthService);
+    private liniowyHealth = inject(LiniowyHealthService);
+    private skalaHealth = inject(SkalaHealthService);
+
+    calculate(income: number, expensesNet: number, taxForm: string, zusType: string, hasSickness: boolean) {
+        const socialCalc = this.socialService.calculate(zusType, hasSickness);
+
+        let socialDeductible = 0;
+        if (taxForm.startsWith('RYCZALT')) {
+            socialDeductible = socialCalc.socialAmount;
+        } else {
+            socialDeductible = socialCalc.socialAmount + socialCalc.fp;
+        }
+
+        let healthAmount = 0;
+        if (taxForm === 'SKALA') {
+            healthAmount = this.skalaHealth.calculate(income, expensesNet, socialDeductible);
+        } else if (taxForm === 'LINIOWY') {
+            healthAmount = this.liniowyHealth.calculate(income, expensesNet, socialDeductible);
+        } else if (taxForm.startsWith('RYCZALT')) {
+            healthAmount = this.ryczaltHealth.calculate(income, socialDeductible);
+        }
+
+        const totalZus = socialCalc.socialAmount + socialCalc.fp + healthAmount;
+
+        return {
+            socialAmount: socialCalc.socialAmount,
+            socialDeductible,
+            healthAmount,
+            totalZus,
+            fp: socialCalc.fp
+        };
+    }
+}
+
+// FILE: src/app/services/tax/ryczalt-tax.service.ts
+import {Injectable} from '@angular/core';
+import {TAX_FORM_OPTIONS} from '../../models/b2b-types';
+
+@Injectable({
+    providedIn: 'root',
+})
+class RyczaltTaxService {
+    calculate(income: number, socialDeductible: number, healthAmount: number, taxForm: string): number {
+        const selectedTaxOption = TAX_FORM_OPTIONS.find(opt => opt.key === taxForm);
+        const taxRate = selectedTaxOption?.rate ?? 0.12;
+        const taxBase = Math.round(Math.max(0, income - socialDeductible - (0.5 * healthAmount)));
+        return Math.round(taxBase * taxRate);
+    }
+}
+
+// FILE: src/app/services/tax/liniowy-tax.service.ts
+import {Injectable} from '@angular/core';
+import {ZUS_2026} from "../../models/zus-2026";
+
+@Injectable({
+    providedIn: 'root',
+})
+class LiniowyTaxService {
+    calculate(income: number, expenses: number, socialDeductible: number, healthAmount: number): number {
+        const monthlyHealthDedLimit = ZUS_2026.HEALTH_ZUS.DEDUCTION_LIMIT_LINIOWY / 12;
+        const deductibleHealth = Math.min(healthAmount, monthlyHealthDedLimit);
+        const taxBase = Math.round(Math.max(0, income - expenses - socialDeductible - deductibleHealth));
+        return Math.round(taxBase * 0.19);
+    }
+}
+
+// FILE: src/app/services/tax/skala-tax.service.ts
+import {Injectable} from '@angular/core';
+
+@Injectable({
+    providedIn: 'root',
+})
+class SkalaTaxService {
+    calculate(income: number, expenses: number, socialDeductible: number): number {
+        const taxBase = Math.round(Math.max(0, income - expenses - socialDeductible));
+        if (taxBase <= 10000) {
+            return Math.round(Math.max(0, (taxBase * 0.12) - 300));
+        } else {
+            const baseTax = (10000 * 0.12) - 300;
+            const excessTax = (taxBase - 10000) * 0.32;
+            return Math.round(baseTax + excessTax);
+        }
+    }
+}
+
+// FILE: src/app/services/tax/income-tax-calculation.service.ts
+import {inject, Injectable} from '@angular/core';
+import {RyczaltTaxService} from "./ryczalt-tax.service";
+import {LiniowyTaxService} from "./liniowy-tax.service";
+import {SkalaTaxService} from "./skala-tax.service";
+
+@Injectable({
+    providedIn: 'root',
+})
+class IncomeTaxCalculationService {
+    private ryczaltService = inject(RyczaltTaxService);
+    private liniowyService = inject(LiniowyTaxService);
+    private skalaService = inject(SkalaTaxService);
+
+    calculate(income: number, totalExpensesNet: number, socialDeductible: number, healthAmount: number, taxForm: string) {
+        if (taxForm.startsWith('RYCZALT')) {
+            return this.ryczaltService.calculate(income, socialDeductible, healthAmount, taxForm);
+        } else if (taxForm === 'LINIOWY') {
+            return this.liniowyService.calculate(income, totalExpensesNet, socialDeductible, healthAmount);
+        } else if (taxForm === 'SKALA') {
+            return this.skalaService.calculate(income, totalExpensesNet, socialDeductible);
+        }
+        return 0;
+    }
+}
+
+// FILE: src/app/services/b2b-calculator.service.ts
+import {computed, effect, inject, Injectable, signal} from '@angular/core';
+import {Expense} from '../models/b2b-types';
+import {AppCookieService} from './cookie.service';
+import {ExpensesCalculationService} from "./expenses-calculation.service";
+import {IncomeTaxCalculationService} from "./tax/income-tax-calculation.service";
+import {VatCalculationService} from "./vat-calculation.service";
+import {ZusService} from "./zus/zus.service";
+
+const COOKIE_PREFIX = 'b2b_calc_';
+
+@Injectable({
+    providedIn: 'root',
+})
+class B2bCalculatorService {
+    private cookie = inject(AppCookieService);
+
+    private zusService = inject(ZusService);
+    private expensesService = inject(ExpensesCalculationService);
+    private incomeTaxService = inject(IncomeTaxCalculationService);
+    private vatService = inject(VatCalculationService);
+
+    readonly income = signal(this.cookie.consentGranted() ? Number(this.cookie.get(COOKIE_PREFIX + 'income') || 25000) : 25000);
+    readonly vatRate = signal(this.cookie.consentGranted() ? Number(this.cookie.get(COOKIE_PREFIX + 'vatRate') || 23) : 23);
+    readonly taxForm = signal(this.cookie.consentGranted() ? this.cookie.get(COOKIE_PREFIX + 'taxForm') || 'RYCZALT_12' : 'RYCZALT_12');
+    readonly zusType = signal(this.cookie.consentGranted() ? this.cookie.get(COOKIE_PREFIX + 'zusType') || 'PELNY' : 'PELNY');
+    readonly hasSickness = signal(this.cookie.consentGranted() ? JSON.parse(this.cookie.get(COOKIE_PREFIX + 'hasSickness') || 'false') : false);
+    readonly expenses = signal<Expense[]>(this.cookie.consentGranted() ? JSON.parse(this.cookie.get(COOKIE_PREFIX + 'expenses') || '[]') : []);
+
+    constructor() {
+        effect(() => {
+            if (this.cookie.consentGranted()) {
+                this.cookie.set(COOKIE_PREFIX + 'income', this.income().toString());
+                this.cookie.set(COOKIE_PREFIX + 'vatRate', this.vatRate().toString());
+                this.cookie.set(COOKIE_PREFIX + 'taxForm', this.taxForm());
+                this.cookie.set(COOKIE_PREFIX + 'zusType', this.zusType());
+                this.cookie.set(COOKIE_PREFIX + 'hasSickness', JSON.stringify(this.hasSickness()));
+                this.cookie.set(COOKIE_PREFIX + 'expenses', JSON.stringify(this.expenses()));
+            }
+        });
+
+        if (this.expenses().length === 0) {
+            this.expenses.set([
+                {id: 1, name: 'Biuro rachunkowe', net: 200, vat: 23, carType: 'none'},
+                {id: 2, name: 'Telefon', net: 50, vat: 23, carType: 'none'},
+            ]);
+        }
+    }
+
+    readonly results = computed(() => {
+        const inc = this.income();
+        const vatRate = this.vatRate();
+        const form = this.taxForm();
+        const zusType = this.zusType();
+        const hasSickness = this.hasSickness();
+        const expenses = this.expenses();
+
+        const expensesCalc = this.expensesService.calculate(expenses, vatRate > 0);
+        const vatCalc = this.vatService.calculate(inc, vatRate, expensesCalc.totalVatDeduction);
+        const zusCalc = this.zusService.calculate(inc, expensesCalc.totalPitCost, form, zusType, hasSickness);
+        const incomeTax = this.incomeTaxService.calculate(
+            inc,
+            expensesCalc.totalPitCost,
+            zusCalc.socialDeductible,
+            zusCalc.healthAmount,
+            form
+        );
+
+        const netTakeHome = inc - incomeTax - zusCalc.totalZus - expensesCalc.totalRealCost;
+
+        return {
+            grossTotal: vatCalc.grossTotal,
+            vatAmount: vatCalc.vatAmount,
+            vatToPay: vatCalc.vatToPay,
+            socialZus: zusCalc.socialAmount,
+            healthZus: zusCalc.healthAmount,
+            totalZus: zusCalc.totalZus,
+            incomeTax,
+            totalExpensesDeductible: expensesCalc.totalPitCost,
+            totalRealExpenses: expensesCalc.totalRealCost,
+            totalExpensesVat: expensesCalc.totalVatDeduction,
+            netTakeHome
+        };
+    });
+
+    setIncome(val: number) { this.income.set(val); }
+    setVatRate(val: number) { this.vatRate.set(val); }
+    setTaxForm(val: string) { this.taxForm.set(val); }
+    setZusType(val: string) { this.zusType.set(val); }
+    toggleSickness() { this.hasSickness.update(v => !v); }
+
+    addExpense() {
+        this.expenses.update(prev => [...prev, {id: Date.now(), name: 'Nowy koszt', net: 0, vat: 23, carType: 'none'}]);
+    }
+
+    updateExpense(id: number, field: keyof Expense, value: any) {
+        this.expenses.update(prev => prev.map(e => e.id === id ? {...e, [field]: value} : e));
+    }
+
+    removeExpense(id: number) {
+        this.expenses.update(prev => prev.filter(e => e.id !== id));
+    }
+}
+
+// ==========================================
+// COMPONENTS
+// ==========================================
+
+// FILE: src/app/components/layout/navbar/navbar.component.ts
+import { Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ThemeService } from '../../../services/theme.service';
+
+@Component({
+  selector: 'app-navbar',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './navbar.component.html',
+  styleUrl: './navbar.component.scss',
+})
+class NavbarComponent {
+  themeService = inject(ThemeService);
+}
+
+// FILE: src/app/components/layout/navbar/navbar.component.html
+<nav class="w-full bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 transition-colors duration-300">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <div class="bg-emerald-500 p-1.5 rounded-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                     stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2v20"/>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+            </div>
+            <span class="text-xl font-bold tracking-tight text-slate-900 dark:text-white">
+            kalkb2b<span class="text-emerald-500 dark:text-emerald-400">.pl</span>
+          </span>
+        </div>
+
+        <div class="flex items-center gap-6">
+            <div class="flex items-center bg-slate-100 dark:bg-slate-800 rounded-lg p-1 gap-1">
+                <button
+                    (click)="themeService.setTheme('light')"
+                    [class.bg-white]="themeService.currentTheme() === 'light'"
+                    [class.shadow-sm]="themeService.currentTheme() === 'light'"
+                    [class.text-emerald-600]="themeService.currentTheme() === 'light'"
+                    class="p-1.5 rounded-md text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all"
+                    title="Tryb jasny">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+                <button
+                    (click)="themeService.setTheme('dark')"
+                    [class.bg-slate-700]="themeService.currentTheme() === 'dark'"
+                    [class.shadow-sm]="themeService.currentTheme() === 'dark'"
+                    [class.text-emerald-400]="themeService.currentTheme() === 'dark'"
+                    class="p-1.5 rounded-md text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all"
+                    title="Tryb ciemny">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="hidden md:flex items-center gap-6">
+                <div class="relative group">
+                    <button class="text-slate-500 dark:text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors text-sm font-medium cursor-not-allowed">
+                        Eksport PDF
+                    </button>
+                    <div class="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                        dostępne wkrótce
+                    </div>
+                </div>
+
+                <a href="mailto:kontakt@kalkb2b.pl" class="text-slate-500 dark:text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors text-sm font-medium">
+                    Kontakt
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+// FILE: src/app/components/layout/footer/footer.component.ts
+import {Component, EventEmitter, Output} from '@angular/core';
+
+@Component({
+    selector: 'app-footer',
+    standalone: true,
+    templateUrl: './footer.component.html',
+    styleUrl: './footer.component.scss',
+})
+class FooterComponent {
+    @Output() openPrivacyPolicy = new EventEmitter<void>();
+
+    onPrivacyPolicyClick(event: Event) {
+        event.preventDefault();
+        this.openPrivacyPolicy.emit();
+    }
+}
+
+// FILE: src/app/components/layout/footer/footer.component.html
+<footer class="mt-12 border-t border-slate-200 dark:border-slate-800 py-8 bg-white dark:bg-slate-900 transition-colors duration-300">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
+        <p class="text-slate-500 text-xs font-mono">kalkb2b.pl © 2026</p>
+        <div class="flex gap-4 text-xs text-slate-500 items-center">
+            <a href="#" (click)="onPrivacyPolicyClick($event)" class="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors">Polityka prywatności</a>
+            <span class="text-slate-300 dark:text-slate-700">|</span>
+            <span>Aktualizacja 01.2026</span>
+        </div>
+    </div>
+</footer>
+
+// FILE: src/app/components/layout/cookie-consent/cookie-consent.component.ts
+import { Component, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { AppCookieService } from '../../../services/cookie.service';
+
+@Component({
+  selector: 'app-cookie-consent',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './cookie-consent.component.html',
+  styleUrl: './cookie-consent.component.scss'
+})
+class CookieConsentComponent implements OnInit {
+  private cookieService = inject(AppCookieService);
+  isVisible = false;
+
+  ngOnInit(): void {
+    if (!this.cookieService.check('cookie_consent')) {
+      this.isVisible = true;
+    }
+  }
+
+  acceptCookies(): void {
+    this.cookieService.acceptConsent();
+    this.isVisible = false;
+  }
+
+  declineCookies(): void {
+    this.cookieService.declineConsent();
+    this.isVisible = false;
+  }
+}
+
+// FILE: src/app/components/layout/cookie-consent/cookie-consent.component.html
+<div class="cookie-consent-overlay" *ngIf="isVisible">
+  <div class="cookie-consent-modal">
+    <div class="cookie-icon">
+      🍪
+    </div>
+    <h2>Szanujemy Twoją prywatność</h2>
+    <p>
+      Używamy plików cookie, aby zapewnić Ci najlepszą jakość korzystania z naszej aplikacji.
+      Dzięki nim możemy zapamiętać Twoje ustawienia kalkulatora oraz personalizować reklamy.
+    </p>
+    <div class="cookie-actions">
+      <button class="btn-decline" (click)="declineCookies()">Odrzuć</button>
+      <button class="btn-accept" (click)="acceptCookies()">Akceptuję wszystkie</button>
+    </div>
+  </div>
+</div>
+
+// FILE: src/app/components/layout/privacy-policy/privacy-policy.component.ts
+import { Component, Input, Output, EventEmitter, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { AppCookieService } from '../../../services/cookie.service';
+
+@Component({
+  selector: 'app-privacy-policy',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './privacy-policy.component.html',
+  styleUrl: './privacy-policy.component.scss'
+})
+class PrivacyPolicyComponent {
+  @Input() isVisible: boolean = false;
+  @Output() closeEvent = new EventEmitter<void>();
+
+  private cookieService = inject(AppCookieService);
+
+  closePolicy(): void {
+    this.closeEvent.emit();
+  }
+
+  revokeConsent(): void {
+    this.cookieService.delete('cookie_consent');
+    this.cookieService.delete('b2b_calc_income');
+    this.cookieService.delete('b2b_calc_vatRate');
+    this.cookieService.delete('b2b_calc_taxForm');
+    this.cookieService.delete('b2b_calc_zusType');
+    this.cookieService.delete('b2b_calc_hasSickness');
+    this.cookieService.delete('b2b_calc_expenses');
+    window.location.reload();
+  }
+}
+
+// FILE: src/app/components/layout/privacy-policy/privacy-policy.component.html
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" *ngIf="isVisible" (click)="closePolicy()">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-fade-in-up" (click)="$event.stopPropagation()">
+
+        <div class="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-900/50">
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <span class="text-2xl">🔒</span> Polityka Prywatności
+            </h2>
+            <button (click)="closePolicy()" class="text-slate-400 hover:text-white transition-colors p-2 rounded-lg hover:bg-slate-800">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+
+        <div class="p-6 overflow-y-auto text-slate-300 space-y-6 custom-scrollbar">
+            <section>
+                <h3 class="text-lg font-semibold text-emerald-400 mb-2">1. Informacje ogólne</h3>
+                <p class="text-sm leading-relaxed">
+                    Niniejsza Polityka Prywatności określa zasady przetwarzania i ochrony danych osobowych przekazanych przez Użytkowników w związku z korzystaniem z Kalkulatora B2B.
+                    Administratorem danych jest właściciel serwisu.
+                </p>
+            </section>
+
+            <section>
+                <h3 class="text-lg font-semibold text-emerald-400 mb-2">2. Jakie dane zbieramy?</h3>
+                <p class="text-sm leading-relaxed">
+                    Aplikacja zbiera wyłącznie dane niezbędne do przeprowadzenia obliczeń podatkowych, takie jak:
+                </p>
+                <ul class="list-disc list-inside mt-2 text-sm space-y-1 ml-2 text-slate-400">
+                    <li>Kwota przychodu netto</li>
+                    <li>Wybrana forma opodatkowania</li>
+                    <li>Preferencje dotyczące składek ZUS</li>
+                    <li>Koszty prowadzenia działalności</li>
+                </ul>
+                <p class="text-sm leading-relaxed mt-2">
+                    Dane te są zapisywane lokalnie w Twojej przeglądarce (pliki cookies/localStorage) w celu zapamiętania ustawień pomiędzy sesjami. Nie są one przesyłane na nasze serwery ani udostępniane podmiotom trzecim.
+                </p>
+            </section>
+
+            <section>
+                <h3 class="text-lg font-semibold text-emerald-400 mb-2">3. Pliki Cookies</h3>
+                <p class="text-sm leading-relaxed">
+                    Stosujemy pliki cookies w celu zapewnienia poprawnego działania serwisu oraz zapamiętywania wprowadzonych przez Ciebie danych.
+                    Korzystając z serwisu wyrażasz zgodę na ich używanie. Możesz w każdej chwili zmienić ustawienia swojej przeglądarki lub wycofać zgodę poniżej.
+                </p>
+            </section>
+        </div>
+
+        <div class="p-6 border-t border-slate-800 bg-slate-900/50 flex justify-end gap-3">
+            <button (click)="revokeConsent()" class="px-4 py-2 text-sm font-medium text-red-400 bg-red-400/10 border border-red-400/20 rounded-lg hover:bg-red-400/20 transition-colors">
+                Wycofaj zgody i usuń dane
+            </button>
+            <button (click)="closePolicy()" class="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-500 transition-colors shadow-lg shadow-emerald-900/20">
+                Zamknij
+            </button>
+        </div>
+    </div>
+</div>
+
+// FILE: src/app/components/calculator/parameters-form/parameters-form.component.ts
+import { Component, inject, OnInit, OnDestroy } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { B2bCalculatorService } from '../../../services/b2b-calculator.service';
+import { TAX_FORM_OPTIONS, ZUS_OPTIONS } from '../../../models/b2b-types';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
+
+@Component({
+  selector: 'app-parameters-form',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './parameters-form.component.html',
+  styleUrl: './parameters-form.component.scss'
+})
+class ParametersFormComponent implements OnInit, OnDestroy {
+  service = inject(B2bCalculatorService);
+  taxOptions = TAX_FORM_OPTIONS;
+  zusOptions = ZUS_OPTIONS;
+
+  private incomeInput$ = new Subject<number>();
+  private subscription: Subscription | undefined;
+
+  ngOnInit(): void {
+    this.subscription = this.incomeInput$.pipe(
+      debounceTime(300)
+    ).subscribe(value => {
+      this.service.setIncome(value);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.subscription?.unsubscribe();
+  }
+
+  onIncomeInput(event: Event): void {
+    const value = Number((event.target as HTMLInputElement).value);
+    this.incomeInput$.next(value);
+  }
+
+  getValue(event: Event): number { return Number((event.target as HTMLInputElement).value); }
+  getStringValue(event: Event): string { return (event.target as HTMLSelectElement).value; }
+}
+
+// FILE: src/app/components/calculator/parameters-form/parameters-form.component.html
+<div class="space-y-6">
+    <section class="bg-white dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none transition-colors duration-300">
+        <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+            <span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+            Konfiguracja Przychodu
+        </h3>
+
+        <div class="space-y-6">
+            <div class="group">
+                <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1.5 ml-1">Przychód miesięczny (Netto)</label>
+                <div class="relative">
+                    <input
+                            type="number"
+                            [value]="service.income()"
+                            (input)="onIncomeInput($event)"
+                            class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-md px-4 py-3 text-lg font-mono focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all"
+                    />
+                    <span class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 font-mono text-sm">PLN</span>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1.5 ml-1">Stawka VAT</label>
+                <div class="grid grid-cols-3 gap-2">
+                    <button
+                            *ngFor="let rate of [23, 8, 0]"
+                            (click)="service.setVatRate(rate)"
+                            [class.bg-emerald-600]="service.vatRate() === rate"
+                            [class.text-white]="service.vatRate() === rate"
+                            [class.border-emerald-500]="service.vatRate() === rate"
+                            [class.bg-slate-50]="service.vatRate() !== rate"
+                            [class.dark:bg-slate-900]="service.vatRate() !== rate"
+                            [class.text-slate-600]="service.vatRate() !== rate"
+                            [class.dark:text-slate-400]="service.vatRate() !== rate"
+                            [class.border-slate-200]="service.vatRate() !== rate"
+                            [class.dark:border-slate-700]="service.vatRate() !== rate"
+                            class="border rounded-md py-2 text-sm font-mono transition-all hover:bg-slate-100 dark:hover:bg-slate-700"
+                    >
+                        {{ rate }}%
+                    </button>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1.5 ml-1">Forma opodatkowania</label>
+                <select
+                        [value]="service.taxForm()"
+                        (change)="service.setTaxForm(getStringValue($event))"
+                        class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-200 rounded-md px-4 py-3 text-sm focus:ring-1 focus:ring-emerald-500 outline-none appearance-none transition-colors"
+                >
+                    @for (form of taxOptions; track form.key) {
+                        <option [value]="form.key">{{ form.label }}</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </section>
+
+    <section class="bg-white dark:bg-slate-800 p-6 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm dark:shadow-none transition-colors duration-300">
+        <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-6 flex items-center gap-2">
+            <span class="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+            Konfiguracja ZUS
+        </h3>
+
+        <div class="space-y-3">
+            @for (zus of zusOptions; track zus.key) {
+                <label
+                        class="flex items-center p-3 rounded-md border cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                        [ngClass]="{
+                'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700': service.zusType() !== zus.key,
+                'bg-blue-50 dark:bg-blue-900/20 border-blue-500': service.zusType() === zus.key
+              }"
+                >
+                    <div class="relative flex items-center justify-center w-5 h-5 rounded-full border border-slate-400 dark:border-slate-500 mr-3"
+                         [class.border-blue-500]="service.zusType() === zus.key">
+                        <div class="w-2.5 h-2.5 rounded-full bg-blue-500 transition-transform scale-0"
+                             [class.scale-100]="service.zusType() === zus.key"></div>
+                    </div>
+                    <input
+                            type="radio"
+                            name="zus"
+                            class="hidden"
+                            [checked]="service.zusType() === zus.key"
+                            (change)="service.setZusType(zus.key)"
+                    />
+                    <span class="text-sm font-medium text-slate-700 dark:text-slate-300">{{ zus.label }}</span>
+                </label>
+            }
+
+            <div class="pt-4 mt-2 border-t border-slate-200 dark:border-slate-700">
+                <label class="flex items-center justify-between cursor-pointer group">
+                    <span class="text-sm text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Dobrowolne chorobowe</span>
+                    <div class="relative w-11 h-6 bg-slate-200 dark:bg-slate-700 rounded-full transition-colors" [class.bg-emerald-600]="service.hasSickness()" [class.dark:bg-emerald-600]="service.hasSickness()">
+                        <input
+                                type="checkbox"
+                                class="sr-only"
+                                [checked]="service.hasSickness()"
+                                (change)="service.toggleSickness()"
+                        />
+                        <div class="absolute left-1 top-1 bg-white w-4 h-4 rounded-full transition-transform shadow-sm" [class.translate-x-5]="service.hasSickness()"></div>
+                    </div>
+                </label>
+            </div>
+        </div>
+    </section>
+</div>
+
+// FILE: src/app/components/calculator/results-summary/results-summary.component.ts
+import { Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { B2bCalculatorService } from '../../../services/b2b-calculator.service';
+
+@Component({
+  selector: 'app-results-summary',
+  standalone: true,
+  imports: [CommonModule],
+  templateUrl: './results-summary.component.html',
+  styleUrl: './results-summary.component.scss',
+})
+class ResultsSummaryComponent {
+  service = inject(B2bCalculatorService);
+}
+
+// FILE: src/app/components/calculator/results-summary/results-summary.component.html
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="bg-gradient-to-br from-emerald-800 to-slate-800 dark:from-emerald-900 dark:to-slate-900 p-6 rounded-lg border border-emerald-600 dark:border-emerald-800 relative overflow-hidden shadow-lg dark:shadow-none transition-all duration-300">
+        <div class="relative z-10">
+            <p class="text-emerald-300 dark:text-emerald-400 text-xs font-bold uppercase tracking-widest mb-2">Dochód netto (Na rękę)</p>
+            <h3 class="text-4xl md:text-5xl font-mono font-bold text-white mb-2">
+                {{ service.results().netTakeHome | number:'1.2-2' }} <span
+                    class="text-xl text-emerald-300/50 dark:text-emerald-500/50">PLN</span>
+            </h3>
+        </div>
+        <div class="absolute right-0 top-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 p-4 rounded-lg border border-slate-200 dark:border-slate-700 flex flex-col justify-center items-center relative min-h-[160px] overflow-hidden group shadow-sm dark:shadow-none transition-colors duration-300">
+        <span class="absolute top-2 right-2 text-[10px] text-slate-400 dark:text-slate-600 font-mono uppercase tracking-widest group-hover:text-slate-500 transition-colors">Reklama</span>
+
+        <div class="w-full h-full flex flex-col items-center justify-center text-slate-500 gap-3 border-2 border-dashed border-slate-200 dark:border-slate-700/50 rounded-md p-4 bg-slate-50 dark:bg-slate-900/30 transition-colors">
+            <div class="w-12 h-12 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm dark:shadow-none">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                     class="opacity-40 text-emerald-500">
+                    <path d="M12 20v-6M6 20V10M18 20V4"/>
+                </svg>
+            </div>
+            <div class="text-center">
+                <p class="text-xs font-mono mb-1 text-slate-500 dark:text-slate-400">Google AdSense Space</p>
+                <p class="text-[10px] text-slate-400 dark:text-slate-600">Responsive Display Ad</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+// FILE: src/app/components/calculator/detailed-breakdown/detailed-breakdown.component.ts
+import {Component, inject} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {B2bCalculatorService} from '../../../services/b2b-calculator.service';
+
+@Component({
+    selector: 'app-detailed-breakdown',
+    standalone: true,
+    imports: [CommonModule],
+    templateUrl: './detailed-breakdown.component.html',
+    styleUrl: './detailed-breakdown.component.scss',
+})
+class DetailedBreakdownComponent {
+    service = inject(B2bCalculatorService);
+}
+
+// FILE: src/app/components/calculator/detailed-breakdown/detailed-breakdown.component.html
+<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm dark:shadow-none transition-colors duration-300">
+    <div class="p-4 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+        <h3 class="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-widest">Analiza przepływów</h3>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             class="text-slate-400 dark:text-gray-500"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" x2="12" y1="20" y2="10"/>
+            <line x1="18" x2="18" y1="20" y2="4"/>
+            <line x1="6" x2="6" y1="20" y2="16"/>
+        </svg>
+    </div>
+
+    <div class="divide-y divide-slate-200 dark:divide-slate-700">
+        <div class="p-4 flex flex-col md:flex-row justify-between items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <div class="p-2 bg-slate-100 dark:bg-slate-900 rounded text-slate-500 dark:text-slate-400 font-mono text-sm">F</div>
+                <div>
+                    <p class="text-sm text-slate-800 dark:text-slate-200 font-medium">BRUTTO</p>
+                    <p class="text-xs text-slate-500">Kwota brutto na fakturze</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="font-mono text-slate-900 dark:text-white text-lg">{{ service.results().grossTotal | number }} zł</p>
+                <p class="text-xs text-slate-500 font-mono">VAT: {{ service.results().vatAmount | number:'1.2-2' }}</p>
+            </div>
+        </div>
+
+        <div class="p-4 flex flex-col md:flex-row justify-between items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <div class="p-2 bg-slate-100 dark:bg-slate-900 rounded text-rose-500 font-mono text-sm">Z</div>
+                <div>
+                    <p class="text-sm text-slate-800 dark:text-slate-200 font-medium">Składki ZUS</p>
+                    <p class="text-xs text-slate-500">Zdrowotna + Społeczne</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="font-mono text-rose-500 dark:text-rose-400 text-lg">-{{ service.results().totalZus | number:'1.2-2' }} zł</p>
+                <p class="text-xs text-slate-500 font-mono">
+                    Zdrowotna: {{ service.results().healthZus | number:'1.2-2' }}</p>
+            </div>
+        </div>
+
+        <div class="p-4 flex flex-col md:flex-row justify-between items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <div class="p-2 bg-slate-100 dark:bg-slate-900 rounded text-amber-500 font-mono text-sm">P</div>
+                <div>
+                    <p class="text-sm text-slate-800 dark:text-slate-200 font-medium">Podatek Dochodowy</p>
+                    <p class="text-xs text-slate-500">PIT</p>
+                </div>
+            </div>
+            <p class="font-mono text-amber-500 dark:text-amber-400 text-lg">-{{ service.results().incomeTax | number:'1.2-2' }} zł</p>
+        </div>
+
+        @if (service.vatRate() > 0) {
+            <div class="p-4 flex flex-col md:flex-row justify-between items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+                <div class="flex items-center gap-3 w-full md:w-auto">
+                    <div class="p-2 bg-slate-100 dark:bg-slate-900 rounded text-purple-500 font-mono text-sm">V</div>
+                    <div>
+                        <p class="text-sm text-slate-800 dark:text-slate-200 font-medium">VAT do zapłaty</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="font-mono text-lg"
+                       [ngClass]="service.results().vatToPay > 0 ? 'text-rose-500 dark:text-rose-400' : 'text-emerald-500 dark:text-emerald-400'">
+                        {{ service.results().vatToPay > 0 ? '-' : '+' }}{{ service.results().vatToPay < 0 ? (service.results().vatToPay * -1 | number:'1.2-2') : (service.results().vatToPay | number:'1.2-2') }}
+                        zł
+                    </p>
+                    <p class="text-xs text-slate-500 font-mono">
+                        Odliczenie: {{ service.results().vatAmount - service.results().vatToPay | number:'1.2-2' }}</p>
+                </div>
+            </div>
+        }
+
+        <div class="p-4 flex flex-col md:flex-row justify-between items-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-700/30 transition-colors">
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <div class="p-2 bg-slate-100 dark:bg-slate-900 rounded text-blue-500 font-mono text-sm">K</div>
+                <div>
+                    <p class="text-sm text-slate-800 dark:text-slate-200 font-medium">Koszty firmowe</p>
+                    <p class="text-xs text-slate-500">Suma wydatków</p>
+                </div>
+            </div>
+            <p class="font-mono text-blue-500 dark:text-blue-400 text-lg">-{{ service.results().totalRealExpenses | number }} zł</p>
+        </div>
+    </div>
+</div>
+
+// FILE: src/app/components/calculator/expenses-manager/expenses-manager.component.ts
+import {Component, inject} from '@angular/core';
+import {CommonModule} from '@angular/common';
+import {B2bCalculatorService} from '../../../services/b2b-calculator.service';
+
+@Component({
+    selector: 'app-expenses-manager',
+    standalone: true,
+    imports: [CommonModule],
+    templateUrl: './expenses-manager.component.html',
+    styleUrl: './expenses-manager.component.scss',
+})
+class ExpensesManagerComponent {
+    service = inject(B2bCalculatorService);
+
+    getVal(e: Event) {
+        return (e.target as HTMLInputElement).value;
+    }
+
+    getNum(e: Event) {
+        return Number((e.target as HTMLInputElement).value);
+    }
+}
+
+// FILE: src/app/components/calculator/expenses-manager/expenses-manager.component.html
+<div class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-6 shadow-sm dark:shadow-none transition-colors duration-300">
+    <div class="flex justify-between items-center mb-6">
+        <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
+            <span class="w-1.5 h-1.5 bg-orange-500 rounded-full"></span>
+            Rejestr Kosztów
+        </h3>
+        <button
+                (click)="service.addExpense()"
+                class="bg-slate-800 hover:bg-emerald-600 dark:bg-slate-700 dark:hover:bg-emerald-600 text-white text-xs font-bold uppercase tracking-wider py-2 px-4 rounded transition-all flex items-center gap-2"
+        >
+            <span>+ Dodaj</span>
+        </button>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+            <tr class="text-slate-500 dark:text-slate-500 text-xs font-mono uppercase border-b border-slate-200 dark:border-slate-700">
+                <th class="pb-3 px-2 font-normal">Opis transakcji</th>
+                <th class="pb-3 px-2 font-normal w-32">Netto</th>
+                <th class="pb-3 px-2 font-normal w-24">VAT</th>
+                <th class="pb-3 px-2 font-normal w-32">Odliczenie VAT/PIT</th>
+                <th class="pb-3 px-2 text-right w-16"></th>
+            </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 dark:divide-slate-700/50">
+                @for (expense of service.expenses(); track expense.id) {
+                    <tr class="group hover:bg-slate-50 dark:hover:bg-slate-700/20 transition-colors">
+                        <td class="py-3 px-2">
+                            <input
+                                    type="text"
+                                    [value]="expense.name"
+                                    (input)="service.updateExpense(expense.id, 'name', getVal($event))"
+                                    class="bg-transparent border-b border-transparent focus:border-emerald-500 text-slate-800 dark:text-slate-200 text-sm w-full outline-none py-1 placeholder-slate-500 dark:placeholder-slate-600"
+                                    placeholder="Nazwa kosztu"
+                            />
+                        </td>
+                        <td class="py-3 px-2">
+                            <div class="relative">
+                                <input
+                                        type="number"
+                                        [value]="expense.net"
+                                        (input)="service.updateExpense(expense.id, 'net', getNum($event))"
+                                        class="bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 focus:border-emerald-500 rounded px-2 py-1 text-right text-slate-800 dark:text-slate-200 font-mono text-sm w-full outline-none"
+                                />
+                            </div>
+                        </td>
+                        <td class="py-3 px-2">
+                            <select
+                                    (change)="service.updateExpense(expense.id, 'vat', getNum($event))"
+                                    class="bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-1 py-1 text-slate-800 dark:text-slate-300 text-xs w-full outline-none focus:border-emerald-500"
+                            >
+                                <option [value]="23" [selected]="expense.vat == 23">23%</option>
+                                <option [value]="8" [selected]="expense.vat == 8">8%</option>
+                                <option [value]="0" [selected]="expense.vat == 0">0%</option>
+                            </select>
+                        </td>
+                        <td class="py-3 px-2">
+                            <select
+                                    (change)="service.updateExpense(expense.id, 'carType', getVal($event))"
+                                    class="bg-slate-100 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded px-1 py-1 text-slate-800 dark:text-slate-300 text-xs w-full outline-none focus:border-emerald-500"
+                            >
+                                <option [value]="'none'" [selected]="expense.carType == 'none'">Pełne (100%)</option>
+                                <option [value]="'mixed'" [selected]="expense.carType == 'mixed'">Auto Mieszane (50%/75%)</option>
+                                <option [value]="'private'" [selected]="expense.carType == 'private'">Auto Prywatne (20%)</option>
+                            </select>
+                        </td>
+                        <td class="py-3 px-2 text-right">
+                            <button
+                                    (click)="service.removeExpense(expense.id)"
+                                    class="text-slate-400 dark:text-slate-600 hover:text-rose-500 transition-colors"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                     stroke-linejoin="round">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        @if (service.expenses().length === 0) {
+            <div class="text-center py-8 text-slate-500 dark:text-slate-600 text-xs font-mono">
+                BRAK WPISÓW W REJESTRZE KOSZTÓW
+            </div>
+        }
+    </div>
+</div>
+
+// FILE: src/app/app.component.ts
+import {Component, ChangeDetectionStrategy, ViewEncapsulation} from '@angular/core';
+import { NavbarComponent } from './components/layout/navbar/navbar.component';
+import { FooterComponent } from './components/layout/footer/footer.component';
+import { ParametersFormComponent } from './components/calculator/parameters-form/parameters-form.component';
+import { ResultsSummaryComponent } from './components/calculator/results-summary/results-summary.component';
+import { DetailedBreakdownComponent } from './components/calculator/detailed-breakdown/detailed-breakdown.component';
+import { ExpensesManagerComponent } from './components/calculator/expenses-manager/expenses-manager.component';
+import { CookieConsentComponent } from './components/layout/cookie-consent/cookie-consent.component';
+import { PrivacyPolicyComponent } from './components/layout/privacy-policy/privacy-policy.component';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [
+    NavbarComponent,
+    FooterComponent,
+    ParametersFormComponent,
+    ResultsSummaryComponent,
+    DetailedBreakdownComponent,
+    ExpensesManagerComponent,
+    CookieConsentComponent,
+    PrivacyPolicyComponent
+  ],
+  templateUrl: './app.component.html',
+  encapsulation: ViewEncapsulation.None,
+  styles: [`
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+  `],
+  changeDetection: ChangeDetectionStrategy.OnPush
+})
+class AppComponent {
+  isPrivacyPolicyVisible = false;
+
+  togglePrivacyPolicy(isVisible: boolean) {
+    this.isPrivacyPolicyVisible = isVisible;
+  }
+}
+
+// FILE: src/app/app.component.html
+<div class="min-h-screen bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-200 font-sans selection:bg-emerald-500/30 transition-colors duration-300">
+    <app-navbar />
+
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <div class="flex flex-col md:flex-row justify-between items-end mb-8 gap-4">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900 dark:text-white tracking-tight mb-1">
+                    Kalkulator podatkowy B2B
+                </h1>
+                <p class="text-slate-500 text-sm">
+                    Oblicz faktyczne kwoty przy samozatrudnieniu w 2026 roku
+                </p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div class="lg:col-span-4 order-2 lg:order-1">
+                <app-parameters-form />
+            </div>
+
+            <div class="lg:col-span-8 order-1 lg:order-2 flex flex-col gap-6">
+                <app-results-summary />
+                <app-detailed-breakdown />
+                <app-expenses-manager />
+            </div>
+        </div>
+    </main>
+
+    <app-footer (openPrivacyPolicy)="togglePrivacyPolicy(true)" />
+    <app-cookie-consent />
+    <app-privacy-policy
+        [isVisible]="isPrivacyPolicyVisible"
+        (closeEvent)="togglePrivacyPolicy(false)"
+    />
+</div>

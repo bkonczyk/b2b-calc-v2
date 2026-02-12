@@ -1,6 +1,6 @@
 export const ZUS_2026 = {
     BIG_ZUS: {
-        SOCIAL: 1788.29, // Emerytalna + Rentowa + Wypadkowa + Fundusz Pracy
+        SOCIAL: 1649.82, // Emerytalna + Rentowa + Wypadkowa
         SICKNESS: 138.47,
         FP: 138.47
     },

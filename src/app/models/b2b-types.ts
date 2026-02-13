@@ -30,6 +30,9 @@ export interface ZusOption {
 export const TAX_FORM_OPTIONS: TaxFormOption[] = [
     {key: 'SKALA', label: 'Skala Podatkowa (12%/32%)'}, // Skala ma progi, więc brak stałej stawki
     {key: 'LINIOWY', label: 'Podatek Liniowy (19%)', rate: 0.19},
+    {key: 'RYCZALT_2', label: 'Ryczałt (2%)', rate: 0.02},
+    {key: 'RYCZALT_3', label: 'Ryczałt (3%)', rate: 0.03},
+    {key: 'RYCZALT_55', label: 'Ryczałt (5.5%)', rate: 0.055},
     {key: 'RYCZALT_85', label: 'Ryczałt (8.5%)', rate: 0.085},
     {key: 'RYCZALT_10', label: 'Ryczałt (10%)', rate: 0.10},
     {key: 'RYCZALT_12', label: 'Ryczałt (12%)', rate: 0.12},
